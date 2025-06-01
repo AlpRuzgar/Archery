@@ -35,8 +35,8 @@ class GameScene extends Phaser.Scene {
         background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
 
         //Player oluşturma
-        let player = this.physics.add.sprite(150, config.height / 2, 'player');
-        player.scale = 0.1; // Oyuncu boyutunu ayarla
+        let player = this.physics.add.sprite(250, config.height / 2 - 25, 'player');
+        player.scale = 0.15; // Oyuncu boyutunu ayarla
         player.setCollideWorldBounds(true); // Oyuncu dünya sınırlarına çarptığında duracak
         player.body.setAllowGravity(false); // Oyuncunun yerçekimi etkisi
         player.body.setImmovable(true); // Oyuncu hareket edemeyecek
