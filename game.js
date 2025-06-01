@@ -138,7 +138,7 @@ class GameScene extends Phaser.Scene {
     }
 
     shootArrow(x, y) {
-        let arrow = this.arrows.create(150, config.height / 2, 'arrow');
+        let arrow = this.arrows.create(290, config.height / 2 - 45, 'arrow');
         arrow.scale = 0.05;
         arrow.setVelocity(x, y);
     }
