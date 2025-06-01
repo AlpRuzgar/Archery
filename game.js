@@ -1,4 +1,129 @@
-// ------------------- StartScene -------------------
+// ------------------- Start Scene -------------------
+
+class StartScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'StartScene' });
+    }
+
+
+
+    preload() {
+        this.load.image('background', 'assets/background.png');
+        this.load.image('start-button', 'assets/ui/start_button.png');
+        this.load.image('game-title', 'assets/ui/title.png');
+        this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
+        this.load.image('sound-off', 'assets/ui/sound_off.png');  // Ses kapalı ikonu
+
+
+        this.load.audio('background-music', 'assets/sounds/backgroundMusic.mp3');
+        this.load.audio('gameover-sound', 'assets/sounds/gameover.mp3');
+        this.load.audio('buttonClick', 'assets/sounds/button-click.mp3');
+    }
+
+    create() {
+        
+        this.sound.stopAll();
+        this.buttonClickSound = this.sound.add('buttonClick');
+    
+
+        // Arka plan
+        let background = this.add.image(0, 0, 'background');
+        background.setOrigin(0, 0);
+        background.setDisplaySize(config.width, config.height);
+
+        // SES BUTONU
+        this.isSoundOn = true;
+        this.soundButton = this.add.image(config.width - 50, 50, 'sound-on');
+        this.soundButton.setDepth(10); // Ses butonunu öne al
+        this.soundButton.setOrigin(0.5);
+        this.soundButton.setScale(0.15);
+        this.soundButton.setInteractive({ useHandCursor: true });
+
+        this.soundButton.on('pointerdown', () => {
+            this.isSoundOn = !this.isSoundOn;
+
+            if (this.isSoundOn) {
+                this.soundButton.setTexture('sound-on');
+                this.sound.mute = false;
+            } else {
+                this.soundButton.setTexture('sound-off');
+                this.sound.mute = true;
+            }
+        });
+
+        this.backgroundMusic = this.sound.add('background-music', { loop: true, volume: 0.5 });
+        this.backgroundMusic.play();
+
+        // Parlayan efekt - arka plan için overlay
+        let glowGraphics = this.add.graphics();
+        glowGraphics.fillStyle(0xffff00, 0.1);
+        glowGraphics.fillRect(0, 0, 1000, 600);
+
+        // Glow efekti animasyonu
+        this.tweens.add({
+            targets: glowGraphics,
+            alpha: { from: 0.1, to: 0.2 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Game title image 
+        let titleImage = this.add.image(config.width / 2, config.height / 2 - 100, 'game-title');
+        titleImage.setOrigin(0.5, 0.5);
+        titleImage.setScale(0.5);
+
+        // Title image animasyon
+        this.tweens.add({
+            targets: titleImage,
+            scaleX: { from: titleImage.scaleX, to: titleImage.scaleX * 1.05 },
+            scaleY: { from: titleImage.scaleY, to: titleImage.scaleY * 1.05 },
+            duration: 1500,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Buton
+        let startButton = this.add.image(config.width / 2, config.width / 2 + 100, 'start-button');
+        startButton.setScale(0.2);
+        startButton.setInteractive({ useHandCursor: true });
+        startButton.setDepth(2);
+
+
+        // Buton için pulse efekti
+        let buttonTween = this.tweens.add({
+            targets: [startButton],
+            scaleX: { from: startButton.scaleX, to: startButton.scaleX * 1.1 },
+            scaleY: { from: startButton.scaleY, to: startButton.scaleY * 1.1 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Buton efektleri
+        startButton.on('pointerover', () => {
+            startButton.setScale(0.3);
+            buttonTween.pause();
+        });
+
+        startButton.on('pointerout', () => {
+            startButton.setScale(0.4);
+            buttonTween.resume();
+        });
+
+        startButton.on('pointerdown', () => {
+            this.buttonClickSound.play();
+            startButton.disableInteractive();
+            startButton.setVisible(false);
+            this.scene.start('GameScene');
+
+        });
+    }
+
+    update() {
+        // Oyun başlangıcında yapılacak güncellemeler
+    }
+}
 
 // ------------------- GameScene -------------------
 class GameScene extends Phaser.Scene {
@@ -12,6 +137,12 @@ class GameScene extends Phaser.Scene {
         this.load.image('arrow', 'assets/arrow.png');
         this.load.image('player', 'assets/player.png');
         this.load.image('background', 'assets/background.png');
+        this.load.image('explosion', 'assets/explosion.png');
+
+        this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
+        this.load.image('sound-off', 'assets/ui/sound_off.png');  // Ses kapalı ikonu
+
+        this.load.audio('explosion', 'assets/sounds/bomb.mp3');
     }
 
     create() {
@@ -28,7 +159,31 @@ class GameScene extends Phaser.Scene {
 
         this.hearts = 3; // Oyuncunun canı
 
+        this.explosionSound = this.sound.add('explosion');
+
         this.physics.world.setBounds(0, 0, config.width, config.height); // Oyun alanının sınırlarını ayarla
+
+        // SES BUTONU
+        this.isSoundOn = true;
+        this.soundButton = this.add.image(config.width - 50, 50, 'sound-on');
+        this.soundButton.setDepth(10); // Ses butonunu öne al
+        this.soundButton.setOrigin(0.5);
+        this.soundButton.setScale(0.15);
+        this.soundButton.setInteractive({ useHandCursor: true });
+
+        this.soundButton.on('pointerdown', () => {
+            this.isSoundOn = !this.isSoundOn;
+
+            if (this.isSoundOn) {
+                this.soundButton.setTexture('sound-on');
+                this.sound.mute = false;
+            } else {
+                this.soundButton.setTexture('sound-off');
+                this.sound.mute = true;
+            }
+        });
+
+
 
         // Arka plan resmi
         let background = this.add.image(config.width / 2, config.height / 2, 'background');
@@ -148,7 +303,7 @@ class GameScene extends Phaser.Scene {
         let xArray = []; // X koordinatları için bir dizi oluştur
         let y;
         let velocity;
-        for (let index = config.width / 2; index < config.width; index += 100) { // 100 piksel aralıklarla X koordinatlarını ekle
+        for (let index = config.width / 2 + 100; index < config.width; index += 100) { // 100 piksel aralıklarla X koordinatlarını ekle
             xArray.push(index);
         }
         let x = xArray[Phaser.Math.Between(0, xArray.length - 1)];
@@ -176,7 +331,7 @@ class GameScene extends Phaser.Scene {
         let xArray = []; // X koordinatları için bir dizi oluştur
         let y;
         let velocity;
-        for (let index = config.width / 2; index < config.width; index += 100) { // 100 piksel aralıklarla X koordinatlarını ekle
+        for (let index = config.width / 2 + 100; index < config.width; index += 100) { // 100 piksel aralıklarla X koordinatlarını ekle
             xArray.push(index);
         }
         let x = xArray[Phaser.Math.Between(0, xArray.length - 1)];
@@ -213,6 +368,22 @@ class GameScene extends Phaser.Scene {
         arrow.destroy(); // Okun kendisini yok et
         this.hearts -= 1; // Canı azalt
         this.heartsText.setText('Can: ' + this.hearts); // Can yazısını güncelle
+        let explosion = this.add.image(bomb.x, bomb.y, 'explosion');
+        explosion.setScale(0.5); // İstersen ayarla
+        explosion.setDepth(10); // Önde gözükmesi için
+        this.explosionSound.play(); // Patlama sesini çal
+
+        // Patlama efekti yavaşça kaybolsun
+        this.tweens.add({
+            targets: explosion,
+            alpha: 0,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 800,
+            onComplete: () => {
+                explosion.destroy();
+            }
+        });
         if (this.hearts <= 0) {
             this.physics.pause() // Oyun bitti sahnesine geç
         }
@@ -273,7 +444,7 @@ const config = {
             debug: false
         }
     },
-    scene: [GameScene, GameOverScene, WinScene]
+    scene: [StartScene, GameScene, GameOverScene, WinScene]
 };
 
 const game = new Phaser.Game(config);
