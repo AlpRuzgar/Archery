@@ -9,6 +9,9 @@ class GameScene extends Phaser.Scene {
     preload() {
         this.load.image('item', 'assets/coin.png');
         this.load.image('bomb', 'assets/bombCopy.png');
+        this.load.image('arrow', 'assets/arrow.png');
+        this.load.image('player', 'assets/player.png');
+        this.load.image('background', 'assets/background.png');
     }
 
     create() {
@@ -27,24 +30,25 @@ class GameScene extends Phaser.Scene {
 
         this.physics.world.setBounds(0, 0, config.width, config.height); // Oyun alanının sınırlarını ayarla
 
+        // Arka plan resmi
+        let background = this.add.image(config.width / 2, config.height / 2, 'background');
+        background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
+
         //Player oluşturma
         let player = this.physics.add.sprite(150, config.height / 2, 'player');
+        player.scale = 0.1; // Oyuncu boyutunu ayarla
         player.setCollideWorldBounds(true); // Oyuncu dünya sınırlarına çarptığında duracak
         player.body.setAllowGravity(false); // Oyuncunun yerçekimi etkisi
         player.body.setImmovable(true); // Oyuncu hareket edemeyecek
 
         //gruplar
         this.arrows = this.physics.add.group();
-        this.itemsButtom = this.physics.add.group();
-        this.itemsTop = this.physics.add.group();
-        this.bombsButtom = this.physics.add.group();
-        this.bombsTop = this.physics.add.group();
+        this.bombs = this.physics.add.group();
+        this.items = this.physics.add.group();
 
         //overlaplar
-        this.physics.add.overlap(this.arrows, this.itemsTop, this.hitItem, null, this);
-        this.physics.add.overlap(this.arrows, this.itemsButtom, this.hitItem, null, this);
-        this.physics.add.overlap(this.arrows, this.bombsTop, this.hitBomb, null, this);
-        this.physics.add.overlap(this.arrows, this.bombsButtom, this.hitBomb, null, this);
+        this.physics.add.overlap(this.arrows, this.items, this.hitItem, null, this);
+        this.physics.add.overlap(this.arrows, this.bombs, this.hitBomb, null, this);
 
         this.score = 0;
 
@@ -87,9 +91,9 @@ class GameScene extends Phaser.Scene {
         this.itemSpawnTimer += delta;
         if (this.itemSpawnTimer >= this.itemSpawnInterval) {
             if (Phaser.Math.Between(0, 1) === 0) {
-                this.addItemTop();
+                this.addItem("top");
             } else {
-                this.addItemBottom();
+                this.addItem("bottom");
             }
             this.itemSpawnTimer = 0;
         }
@@ -98,89 +102,101 @@ class GameScene extends Phaser.Scene {
         this.bombSpawnTimer += delta;
         if (this.bombSpawnTimer >= this.bombSpawnInterval) {
             if (Phaser.Math.Between(0, 1) === 0) {
-                this.addBombTop();
+                this.addBomb("top");
             } else {
-                this.addBombBottom();
+                this.addBomb("bottom");
             }
             this.bombSpawnTimer = 0;
         }
 
-        //kaçan itemleri silme
-        this.itemsTop.children.each((item) => {
-            if (item.y > config.height + 50) {
+        this.items.children.each((item) => {
+            if (item.from == 'top' && item.y > config.height + 50) {
+                item.destroy();
+            } else if (item.from == 'bottom' && item.y < -50) {
                 item.destroy();
             }
         });
 
-        this.itemsButtom.children.each((item) => {
-            if (item.y < -50) {
-                item.destroy();
+        this.bombs.children.each((bomb) => {
+            if (bomb.from == 'top' && bomb.y > config.height + 50) {
+                bomb.destroy();
+            } else if (bomb.from == 'bottom' && bomb.y < -50) {
+                bomb.destroy();
             }
-        }
-        );
+        });
+
+        //oku gittiği yöne göre döndürme ve kaçan okları silme
+        this.arrows.children.each((arrow) => {
+            let angleRad = Math.atan2(arrow.body.velocity.y, arrow.body.velocity.x);
+            let angleDeg = Phaser.Math.RadToDeg(angleRad);
+            arrow.setAngle(angleDeg + 23.5);
+            if (arrow.y < -50 || arrow.y > config.height + 50) {
+                arrow.destroy();
+                console.log("arrow destroyed");
+            }
+        });
     }
 
     shootArrow(x, y) {
         let arrow = this.arrows.create(150, config.height / 2, 'arrow');
+        arrow.scale = 0.05;
         arrow.setVelocity(x, y);
     }
 
-    //Item ekleme
-    addItemTop() {
-        let xArray = [];
-        for (let index = config.width / 2; index < config.width; index += 100) {
+    // Item ekleme
+    addItem(locY) {
+        let xArray = []; // X koordinatları için bir dizi oluştur
+        let y;
+        let velocity;
+        for (let index = config.width / 2; index < config.width; index += 100) { // 100 piksel aralıklarla X koordinatlarını ekle
             xArray.push(index);
         }
         let x = xArray[Phaser.Math.Between(0, xArray.length - 1)];
-        let y = Phaser.Math.Between(-100, -300);
-
-        let itemTop = this.itemsTop.create(x, y, 'item');
-        itemTop.scale = 0.12; // Item boyutunu ayarla
-        itemTop.body.setAllowGravity(false); // Itemlerin yerçekimi etkisi olmasın
-        itemTop.setVelocityY(Phaser.Math.Between(100, 300));
-    }
-
-    addItemBottom() {
-        let xArray = [];
-        for (let index = config.width / 2; index < config.width; index += 100) {
-            xArray.push(index);
+        if (locY == 'top') { //yukarıda spawn olsun ve aşağı doğru gitsin
+            y = Phaser.Math.Between(-100, -300);
+            velocity = Phaser.Math.Between(100, 300);
         }
-        let x = xArray[Phaser.Math.Between(0, xArray.length - 1)];
-        let y = Phaser.Math.Between(config.height + 100, config.height + 300);
-
-        let itemButtom = this.itemsButtom.create(x, y, 'item');
-        itemButtom.scale = 0.12; // Item boyutunu ayarla
-        itemButtom.body.setAllowGravity(false); // Itemlerin yerçekimi etkisi olmasın
-        itemButtom.setVelocityY(Phaser.Math.Between(-100, -300));
+        else if (locY == 'bottom') { //aşağıda spawn olsun ve yukarı doğru gitsin
+            y = Phaser.Math.Between(config.height + 100, config.height + 300);
+            velocity = Phaser.Math.Between(-100, -300);
+        }
+        else {
+            console.error('Geçersiz konum: ' + locY);
+            return;
+        }
+        let item = this.items.create(x, y, 'item');
+        item.from = locY; // Itemin konumunu kaydet
+        item.scale = 0.12; // Item boyutunu ayarla
+        item.body.setAllowGravity(false); // Itemlerin yerçekimi etkisi olmasın
+        item.setVelocityY(velocity)
     }
 
     //bomba ekleme
-    addBombTop() { 
-        let xArray = [];
-        for (let index = config.width / 2; index < config.width; index += 100) {
+    addBomb(locY) {
+        let xArray = []; // X koordinatları için bir dizi oluştur
+        let y;
+        let velocity;
+        for (let index = config.width / 2; index < config.width; index += 100) { // 100 piksel aralıklarla X koordinatlarını ekle
             xArray.push(index);
         }
         let x = xArray[Phaser.Math.Between(0, xArray.length - 1)];
-        let y = Phaser.Math.Between(-100, -300);
-
-        let bombTop = this.bombsTop.create(x, y, 'bomb');
-        bombTop.scale = 0.12;
-        bombTop.body.setAllowGravity(false); // Bombaların yerçekimi etkisi olmasın
-        bombTop.setVelocityY(Phaser.Math.Between(100, 300));
-    }
-
-    addBombBottom() {
-        let xArray = [];
-        for (let index = config.width / 2; index < config.width; index += 100) {
-            xArray.push(index);
+        if (locY == 'top') { //yukarıda spawn olsun ve aşağı doğru gitsin
+            y = Phaser.Math.Between(-100, -300);
+            velocity = Phaser.Math.Between(100, 300);
         }
-        let x = xArray[Phaser.Math.Between(0, xArray.length - 1)];
-        let y = Phaser.Math.Between(config.height + 100, config.height + 300);
-
-        let bombButtom = this.bombsButtom.create(x, y, 'bomb');
-        bombButtom.scale = 0.12;
-        bombButtom.body.setAllowGravity(false); // Bombaların yerçekimi etkisi olmasın
-        bombButtom.setVelocityY(Phaser.Math.Between(-100, -300));
+        else if (locY == 'bottom') { //aşağıda spawn olsun ve yukarı doğru gitsin
+            y = Phaser.Math.Between(config.height + 100, config.height + 300);
+            velocity = Phaser.Math.Between(-100, -300);
+        }
+        else {
+            console.error('Geçersiz konum: ' + locY);
+            return;
+        }
+        let bomb = this.bombs.create(x, y, 'bomb');
+        bomb.from = locY; // Bombanın konumunu kaydet
+        bomb.scale = 0.12; // Bomba boyutunu ayarla
+        bomb.body.setAllowGravity(false); // Bombaların yerçekimi etkisi olmasın
+        bomb.setVelocityY(velocity);
     }
 
     // Iteme vurma işlemi
@@ -253,7 +269,7 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 200 }, //item düşme hızını değiştirir
+            gravity: { y: 400 }, //item düşme hızını değiştirir
             debug: false
         }
     },
