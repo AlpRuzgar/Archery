@@ -21,10 +21,10 @@ class StartScene extends Phaser.Scene {
     }
 
     create() {
-        
+
         this.sound.stopAll();
         this.buttonClickSound = this.sound.add('buttonClick');
-    
+
 
         // Arka plan
         let background = this.add.image(0, 0, 'background');
@@ -118,6 +118,8 @@ class StartScene extends Phaser.Scene {
             this.scene.start('GameScene');
 
         });
+
+
     }
 
     update() {
@@ -146,12 +148,6 @@ class GameScene extends Phaser.Scene {
     }
 
     create() {
-        let isDragging = false;
-        let dragStartX, dragStartY;
-        let dragStopX, dragStopY;
-        let dragOffsetX, dragOffsetY;
-        let power = 10;
-
         this.itemSpawnInterval = 1000; // item spawn aralığı
         this.itemSpawnTimer = 0;
         this.bombSpawnInterval = 2000; // 2 saniyede bir bomba spawn etme
@@ -219,28 +215,54 @@ class GameScene extends Phaser.Scene {
             fontFamily: 'Arial'
         });
 
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.power = 10;
+
+
+        this.trajectoryLine = this.add.graphics();
+        this.trajectoryLine.setDepth(5); // Çizgiyi öne al
+
+
         this.input.on('pointerdown', (pointer) => {
             if (pointer.leftButtonDown()) {
-                isDragging = true;
-                dragStartX = pointer.x;
-                dragStartY = pointer.y;
+                this.isDragging = true;
+                this.dragStartX = pointer.x;
+                this.dragStartY = pointer.y;
+            }
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.isDragging) {
+                let dragOffsetX = this.dragStartX - pointer.x;
+                let dragOffsetY = this.dragStartY - pointer.y;
+
+                let velocityX = dragOffsetX * this.power;
+                let velocityY = dragOffsetY * this.power;
+
+                this.drawTrajectory(290, this.game.config.height / 2 - 45, velocityX, velocityY);
             }
         });
 
         this.input.on('pointerup', (pointer) => {
-            if (isDragging) {
-                isDragging = false;
-                dragStopX = pointer.x;
-                dragStopY = pointer.y;
+            if (this.isDragging) {
+                this.isDragging = false;
+                this.trajectoryLine.clear();
 
-                dragOffsetX = dragStartX - dragStopX; // ters yön = geri çekme
-                dragOffsetY = dragStartY - dragStopY;
-                if (dragOffsetX != 0 && dragOffsetY != 0) {
-                    this.shootArrow(dragOffsetX * power, dragOffsetY * power);
+                let dragStopX = pointer.x;
+                let dragStopY = pointer.y;
+
+                let dragOffsetX = this.dragStartX - dragStopX;
+                let dragOffsetY = this.dragStartY - dragStopY;
+
+                if (dragOffsetX !== 0 && dragOffsetY !== 0) {
+                    this.shootArrow(dragOffsetX * this.power, dragOffsetY * this.power);
                 }
             }
         });
     }
+
     update(time, delta) {
         // Item spawn etme
         this.itemSpawnTimer += delta;
@@ -290,6 +312,46 @@ class GameScene extends Phaser.Scene {
                 console.log("arrow destroyed");
             }
         });
+    }
+
+    // Okun gideceği yöne göre çizgi çizme
+    drawTrajectory(startX, startY, velocityX, velocityY) {
+        this.trajectoryLine.clear();
+
+        const gravity = this.physics.world.gravity.y;
+        const timeStep = 0.05;
+        const totalTime = 1.5;
+
+        // Güce göre renk hesapla
+        let power = Math.sqrt(velocityX ** 2 + velocityY ** 2);
+        let color = Phaser.Display.Color.Interpolate.ColorWithColor(
+            new Phaser.Display.Color(255, 255, 0), // sarı
+            new Phaser.Display.Color(255, 0, 0),   // kırmızı
+            1000,
+            Math.min(power, 1000)
+        );
+        let hexColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
+
+        this.trajectoryLine.lineStyle(2, hexColor, 1);
+
+        // Nokta çizimi
+        for (let t = 0; t < totalTime; t += timeStep) {
+            let dx = velocityX * t;
+            let dy = velocityY * t + 0.5 * gravity * t * t;
+
+            let pointX = startX + dx;
+            let pointY = startY + dy;
+
+            // Ekran dışına taşmasın
+            if (
+                pointX < 0 || pointX > this.game.config.width ||
+                pointY < 0 || pointY > this.game.config.height
+            ) {
+                break;
+            }
+
+            this.trajectoryLine.strokeCircle(pointX, pointY, 2); // 2px yarıçaplı nokta
+        }
     }
 
     shootArrow(x, y) {
