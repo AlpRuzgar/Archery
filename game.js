@@ -8,7 +8,7 @@ class StartScene extends Phaser.Scene {
 
 
     preload() {
-        this.load.image('background', 'assets/background.png');
+        this.load.image('background', 'assets/wizard-castle.png');
         this.load.image('start-button', 'assets/ui/start_button.png');
         this.load.image('game-title', 'assets/ui/title.png');
         this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
@@ -135,10 +135,10 @@ class GameScene extends Phaser.Scene {
 
     preload() {
         this.load.image('item', 'assets/coin.png');
-        this.load.image('bomb', 'assets/bombCopy.png');
-        this.load.image('arrow', 'assets/arrow.png');
-        this.load.image('player', 'assets/player.png');
-        this.load.image('background', 'assets/background.png');
+        this.load.image('bomb', 'assets/poison.png');
+        this.load.image('arrow', 'assets/fireball.png');
+        this.load.image('player', 'assets/wizard.png');
+        this.load.image('background', 'assets/wizard-castle.png');
         this.load.image('explosion', 'assets/explosion.png');
 
         this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
@@ -186,11 +186,19 @@ class GameScene extends Phaser.Scene {
         background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
 
         //Player oluşturma
-        let player = this.physics.add.sprite(250, config.height / 2 - 25, 'player');
+        let player = this.physics.add.sprite(150, config.height / 2, 'player');
         player.scale = 0.15; // Oyuncu boyutunu ayarla
         player.setCollideWorldBounds(true); // Oyuncu dünya sınırlarına çarptığında duracak
         player.body.setAllowGravity(false); // Oyuncunun yerçekimi etkisi
         player.body.setImmovable(true); // Oyuncu hareket edemeyecek
+        this.tweens.add({
+            targets: player,
+            y: player.y - 10,        // 10px yukarı çık
+            duration: 1500,
+            ease: 'Sine.easeInOut', // yumuşak geçiş
+            yoyo: true,
+            repeat: -1              // sonsuz tekrar
+        });
 
         //gruplar
         this.arrows = this.physics.add.group();
@@ -241,7 +249,7 @@ class GameScene extends Phaser.Scene {
                 let velocityX = dragOffsetX * this.power;
                 let velocityY = dragOffsetY * this.power;
 
-                this.drawTrajectory(290, this.game.config.height / 2 - 45, velocityX, velocityY);
+                this.drawTrajectory(210, this.game.config.height / 2 - 60, velocityX, velocityY);
             }
         });
 
@@ -306,7 +314,7 @@ class GameScene extends Phaser.Scene {
         this.arrows.children.each((arrow) => {
             let angleRad = Math.atan2(arrow.body.velocity.y, arrow.body.velocity.x);
             let angleDeg = Phaser.Math.RadToDeg(angleRad);
-            arrow.setAngle(angleDeg + 23.5);
+            arrow.setAngle(angleDeg - 90);
             if (arrow.y < -50 || arrow.y > config.height + 50) {
                 arrow.destroy();
                 console.log("arrow destroyed");
@@ -325,8 +333,8 @@ class GameScene extends Phaser.Scene {
         // Güce göre renk hesapla
         let power = Math.sqrt(velocityX ** 2 + velocityY ** 2);
         let color = Phaser.Display.Color.Interpolate.ColorWithColor(
-            new Phaser.Display.Color(255, 255, 0), // sarı
-            new Phaser.Display.Color(255, 0, 0),   // kırmızı
+            new Phaser.Display.Color(181, 80, 156), // açık mor
+            new Phaser.Display.Color(102, 1, 152),   // koyu mor
             1000,
             Math.min(power, 1000)
         );
@@ -355,7 +363,7 @@ class GameScene extends Phaser.Scene {
     }
 
     shootArrow(x, y) {
-        let arrow = this.arrows.create(290, config.height / 2 - 45, 'arrow');
+        let arrow = this.arrows.create(210, this.game.config.height / 2 - 60, 'arrow');
         arrow.scale = 0.05;
         arrow.setVelocity(x, y);
     }
@@ -411,7 +419,7 @@ class GameScene extends Phaser.Scene {
         }
         let bomb = this.bombs.create(x, y, 'bomb');
         bomb.from = locY; // Bombanın konumunu kaydet
-        bomb.scale = 0.12; // Bomba boyutunu ayarla
+        bomb.setScale(0.07); // Bomba boyutunu ayarla
         bomb.body.setAllowGravity(false); // Bombaların yerçekimi etkisi olmasın
         bomb.setVelocityY(velocity);
     }
@@ -431,7 +439,7 @@ class GameScene extends Phaser.Scene {
         this.hearts -= 1; // Canı azalt
         this.heartsText.setText('Can: ' + this.hearts); // Can yazısını güncelle
         let explosion = this.add.image(bomb.x, bomb.y, 'explosion');
-        explosion.setScale(0.5); // İstersen ayarla
+        explosion.setScale(0.1); // İstersen ayarla
         explosion.setDepth(10); // Önde gözükmesi için
         this.explosionSound.play(); // Patlama sesini çal
 
@@ -448,6 +456,29 @@ class GameScene extends Phaser.Scene {
         });
         if (this.hearts <= 0) {
             this.physics.pause() // Oyun bitti sahnesine geç
+        }
+    }
+    
+    setDifficulty(level) {
+        switch (level) {
+            case 'easy':
+                this.itemSpawnInterval = 1500; // 1.5 saniyede bir item spawn et
+                this.bombSpawnInterval = 3000; // 3 saniyede bir bomba spawn et
+                break;
+            case 'medium':
+                this.itemSpawnInterval = 1000; // 1 saniyede bir item spawn et
+                this.bombSpawnInterval = 2000; // 2 saniyede bir bomba spawn et
+                break;
+            case 'hard':
+                this.itemSpawnInterval = 500; // 0.5 saniyede bir item spawn et
+                this.bombSpawnInterval = 1000; // 1 saniyede bir bomba spawn et
+                break;
+            case 'very-hard':
+                this.itemSpawnInterval = 300; // 0.3 saniyede bir item spawn et
+                this.bombSpawnInterval = 500; // 0.5 saniyede bir bomba spawn et
+                break;
+            default:
+                console.error('Geçersiz zorluk seviyesi: ' + level);
         }
     }
 }
@@ -510,3 +541,8 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+//TODO: game over ve win sahnelerini ekle
+//TODO: sesleri ekle
+//TODO: zorluk ekle
+//TODO: ui elementleri ekle
