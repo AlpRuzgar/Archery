@@ -8,11 +8,10 @@ class StartScene extends Phaser.Scene {
 
 
     preload() {
-        this.load.image('background', 'assets/wizard-castle.png');
-        this.load.image('start-button', 'assets/ui/start_button.png');
+        this.load.image('start-button', 'assets/ui/start-button.png');
         this.load.image('game-title', 'assets/ui/title.png');
-        this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
-        this.load.image('sound-off', 'assets/ui/sound_off.png');  // Ses kapalı ikonu
+        this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
+        this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
 
 
         this.load.audio('background-music', 'assets/sounds/backgroundMusic.mp3');
@@ -25,11 +24,6 @@ class StartScene extends Phaser.Scene {
         this.sound.stopAll();
         this.buttonClickSound = this.sound.add('buttonClick');
 
-
-        // Arka plan
-        let background = this.add.image(0, 0, 'background');
-        background.setOrigin(0, 0);
-        background.setDisplaySize(config.width, config.height);
 
         // SES BUTONU
         this.isSoundOn = true;
@@ -69,9 +63,9 @@ class StartScene extends Phaser.Scene {
         });
 
         // Game title image 
-        let titleImage = this.add.image(config.width / 2, config.height / 2 - 100, 'game-title');
+        let titleImage = this.add.image(config.width / 2, config.height / 2 - 200, 'game-title');
         titleImage.setOrigin(0.5, 0.5);
-        titleImage.setScale(0.5);
+        titleImage.setScale(0.8);
 
         // Title image animasyon
         this.tweens.add({
@@ -84,8 +78,8 @@ class StartScene extends Phaser.Scene {
         });
 
         // Buton
-        let startButton = this.add.image(config.width / 2, config.width / 2 + 100, 'start-button');
-        startButton.setScale(0.2);
+        let startButton = this.add.image(config.width / 2, config.width / 2 + 50, 'start-button');
+        startButton.setScale(0.4);
         startButton.setInteractive({ useHandCursor: true });
         startButton.setDepth(2);
 
@@ -102,7 +96,7 @@ class StartScene extends Phaser.Scene {
 
         // Buton efektleri
         startButton.on('pointerover', () => {
-            startButton.setScale(0.3);
+            startButton.setScale(0.45);
             buttonTween.pause();
         });
 
@@ -141,10 +135,10 @@ class GameScene extends Phaser.Scene {
         this.load.image('background', 'assets/wizard-castle.png');
         this.load.image('explosion', 'assets/explosion.png');
 
-        this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
-        this.load.image('sound-off', 'assets/ui/sound_off.png');  // Ses kapalı ikonu
-        this.load.image('skor-panel', 'assets/ui/score_panel.png');
-        this.load.image('heart', 'assets/ui/health_point.png');
+        this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
+        this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
+        this.load.image('skor-panel', 'assets/ui/score-image.png');
+        this.load.image('heart', 'assets/ui/heart.png');
 
         this.load.audio('explosion', 'assets/sounds/bomb.mp3');
     }
@@ -190,15 +184,15 @@ class GameScene extends Phaser.Scene {
         background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
 
         //Player oluşturma
-        let player = this.physics.add.sprite(150, config.height / 2, 'player');
-        player.scale = 0.15; // Oyuncu boyutunu ayarla
+        let player = this.physics.add.sprite(250, config.height / 2, 'player');
+        player.setDisplaySize(300, 300); // Oyuncunun boyutunu ayarla
         player.setCollideWorldBounds(true); // Oyuncu dünya sınırlarına çarptığında duracak
         player.body.setAllowGravity(false); // Oyuncunun yerçekimi etkisi
         player.body.setImmovable(true); // Oyuncu hareket edemeyecek
         this.tweens.add({
             targets: player,
             y: player.y - 10,        // 10px yukarı çık
-            duration: 1500,
+            duration: 2000,
             ease: 'Sine.easeInOut', // yumuşak geçiş
             yoyo: true,
             repeat: -1              // sonsuz tekrar
@@ -215,31 +209,7 @@ class GameScene extends Phaser.Scene {
 
         this.score = 0;
 
-        // Score image
-        this.skor = this.add.image(120, 40, 'skor-panel');
-        this.skor.setScale(0.3); // Adjust scale as needed
-        this.skor.setOrigin(0.5);
-
-        // Score value text
-        this.itemScoreText = this.add.text(150, 39, '0', {
-            fontSize: '20px',
-            fontFamily: 'monospace',
-            fontWeight: 'bold',
-            fill: '#ffd700',
-            stroke: '#990000',
-            strokeThickness: 4
-        });
-        this.itemScoreText.setOrigin(0, 0.5);
-        this.itemScoreText.setScrollFactor(0);
-
-
-        this.heartIcons = [];
-        for (let i = 0; i < this.hearts; i++) {
-            let heart = this.add.image(80 + i * 16, 80, 'heart');
-            heart.setScale(0.1); // İsteğe göre ayarla
-            heart.setScrollFactor(0); // Kamerayla sabit kalsın
-            this.heartIcons.push(heart);
-        }
+        this.addUIElements(); // UI elementlerini ekle
 
         this.isDragging = false;
         this.dragStartX = 0;
@@ -267,7 +237,7 @@ class GameScene extends Phaser.Scene {
                 let velocityX = dragOffsetX * this.power;
                 let velocityY = dragOffsetY * this.power;
 
-                this.drawTrajectory(205, this.game.config.height / 2 - 65, velocityX, velocityY);
+                this.drawTrajectory(355, this.game.config.height / 2 - 120, velocityX, velocityY);
             }
         });
 
@@ -358,6 +328,34 @@ class GameScene extends Phaser.Scene {
         }
     }
 
+    addUIElements() {
+        // Score image
+        this.skor = this.add.image(150, 80, 'skor-panel');
+        this.skor.setScale(0.2); // Adjust scale as needed
+        this.skor.setOrigin(0.5);
+
+        // Score value text
+        this.itemScoreText = this.add.text(200, 80, '0', {
+            fontSize: '30px',
+            fontFamily: 'monospace',
+            fontWeight: 'bold',
+            fill: '#d6eaf8',
+            stroke: '#5DADE2',
+            strokeThickness: 4
+        });
+        this.itemScoreText.setOrigin(0, 0.5);
+        this.itemScoreText.setScrollFactor(0);
+
+
+        this.heartIcons = [];
+        for (let i = 0; i < this.hearts; i++) {
+            let heart = this.add.image(120 + i * 30, 160, 'heart');
+            heart.setScale(0.1); // İsteğe göre ayarla
+            heart.setScrollFactor(0); // Kamerayla sabit kalsın
+            this.heartIcons.push(heart);
+        }
+    }
+
     // Okun gideceği yöne göre çizgi çizme
     drawTrajectory(startX, startY, velocityX, velocityY) {
         this.trajectoryLine.clear();
@@ -399,8 +397,8 @@ class GameScene extends Phaser.Scene {
     }
 
     shootArrow(x, y) {
-        let arrow = this.arrows.create(205, this.game.config.height / 2 - 65, 'arrow');
-        arrow.scale = 0.05;
+        let arrow = this.arrows.create(355, this.game.config.height / 2 - 120, 'arrow');
+        arrow.setScale(0.1);
         arrow.setVelocity(x, y);
     }
 
@@ -427,7 +425,7 @@ class GameScene extends Phaser.Scene {
         }
         let item = this.items.create(x, y, 'item');
         item.from = locY; // Itemin konumunu kaydet
-        item.scale = 0.12; // Item boyutunu ayarla
+        item.scale = 0.2; // Item boyutunu ayarla
         item.body.setAllowGravity(false); // Itemlerin yerçekimi etkisi olmasın
         item.setVelocityY(velocity)
     }
@@ -455,7 +453,8 @@ class GameScene extends Phaser.Scene {
         }
         let bomb = this.bombs.create(x, y, 'bomb');
         bomb.from = locY; // Bombanın konumunu kaydet
-        bomb.setScale(0.07); // Bomba boyutunu ayarla
+        bomb.setScale(0.15); // Bomba boyutunu ayarla
+        bomb.setAngularVelocity(Phaser.Math.Between(-100, 100)); // Bombanın rastgele dönmesini sağla
         bomb.body.setAllowGravity(false); // Bombaların yerçekimi etkisi olmasın
         bomb.setVelocityY(velocity);
     }
@@ -533,11 +532,9 @@ class GameOverScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/wizard-castle.png');
-        this.load.image('game-over', 'assets/ui/game_over_text_space.png');
-        this.load.image('sound-on', 'assets/ui/sound_on.png');    // Ses açık ikonu
-        this.load.image('sound-off', 'assets/ui/sound_off.png');  // Ses kapalı ikonu
-        this.load.image('restart-button', 'assets/ui/restart_button_space.png');
+        this.load.image('game-over', 'assets/ui/game-over.png');
+        this.load.image('restart-button', 'assets/ui/restart-button.png');
+        this.load.image('score-image', 'assets/ui/score-image.png');    // Ses açık ikonu
 
         this.load.audio('button-click', 'assets/sounds/button-click.mp3');
     }
@@ -548,35 +545,33 @@ class GameOverScene extends Phaser.Scene {
 
         this.buttonClickSound = this.sound.add('button-click');
 
-        // Arka plan
-        let bg = this.add.image(0, 0, 'background').setOrigin(0, 0);
-        bg.setDisplaySize(this.game.config.width, this.game.config.height);
-
         // "Game Over" Yazısı
-        this.add.image(this.game.config.width / 2, 150, 'game-over')
+        this.gameOverText = this.add.image(this.game.config.width / 2, config.height/2-100, 'game-over')
+        this.gameOverText.setOrigin(0.5, 0.5);
 
-        this.FinalScoreText = this.add.text(config.width / 2 - 50, 350, 'Score = ' + finalScore, {
-            fontSize: '20px',
+        this.FinalScoreText = this.add.text(config.width / 2, config.height/2+200, 'Score = ' + finalScore, {
+            fontSize: '40px',
             fontFamily: 'monospace',
             fontWeight: 'bold',
-            fill: '#32127a',
-            stroke: '#000080',
+            fill: '#d6eaf8',
+            stroke: '#5DADE2',
             strokeThickness: 4
         });
+        this.FinalScoreText.setOrigin(0.5, 0.5);
         this.FinalScoreText.setScrollFactor(0);
 
         // tekrar-oyna button
-        const restartButton = this.add.image(config.width / 2, 450, 'restart-button');
+        const restartButton = this.add.image(config.width / 2, config.height-100, 'restart-button');
         restartButton.setScale(0.3);
         restartButton.setInteractive({ useHandCursor: true });
 
         // Button interactions
         restartButton.on('pointerover', () => {
-            restartButton.setScale(0.35);
+            restartButton.setScale(0.4);
         });
 
         restartButton.on('pointerout', () => {
-            restartButton.setScale(0.32);
+            restartButton.setScale(0.35);
         });
 
         restartButton.on('pointerdown', () => {
@@ -597,8 +592,8 @@ class GameOverScene extends Phaser.Scene {
 // ------------------- Config -------------------
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: 1536,
+    height: 1024,
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
@@ -607,7 +602,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 400 }, //item düşme hızını değiştirir
-            debug: true
+            debug: false
         }
     },
     scene: [StartScene, GameScene, GameOverScene]
