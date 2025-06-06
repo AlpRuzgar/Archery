@@ -12,18 +12,11 @@ class StartScene extends Phaser.Scene {
         this.load.image('game-title', 'assets/ui/title.png');
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
-
-
-        this.load.audio('background-music', 'assets/sounds/backgroundMusic.mp3');
-        this.load.audio('gameover-sound', 'assets/sounds/gameover.mp3');
-        this.load.audio('buttonClick', 'assets/sounds/button-click.mp3');
+        this.load.image('start' , 'assets/ui/start.png');
     }
 
     create() {
-
-        this.sound.stopAll();
-        this.buttonClickSound = this.sound.add('buttonClick');
-
+        this.background = this.add.image(config.width / 2, config.height / 2, 'start')
 
         // SES BUTONU
         this.isSoundOn = true;
@@ -45,9 +38,6 @@ class StartScene extends Phaser.Scene {
             }
         });
 
-        this.backgroundMusic = this.sound.add('background-music', { loop: true, volume: 0.5 });
-        this.backgroundMusic.play();
-
         // Parlayan efekt - arka plan için overlay
         let glowGraphics = this.add.graphics();
         glowGraphics.fillStyle(0xffff00, 0.1);
@@ -57,21 +47,6 @@ class StartScene extends Phaser.Scene {
         this.tweens.add({
             targets: glowGraphics,
             alpha: { from: 0.1, to: 0.2 },
-            duration: 1500,
-            yoyo: true,
-            repeat: -1
-        });
-
-        // Game title image 
-        let titleImage = this.add.image(config.width / 2, config.height / 2 - 200, 'game-title');
-        titleImage.setOrigin(0.5, 0.5);
-        titleImage.setScale(0.8);
-
-        // Title image animasyon
-        this.tweens.add({
-            targets: titleImage,
-            scaleX: { from: titleImage.scaleX, to: titleImage.scaleX * 1.05 },
-            scaleY: { from: titleImage.scaleY, to: titleImage.scaleY * 1.05 },
             duration: 1500,
             yoyo: true,
             repeat: -1
@@ -106,18 +81,11 @@ class StartScene extends Phaser.Scene {
         });
 
         startButton.on('pointerdown', () => {
-            this.buttonClickSound.play();
             startButton.disableInteractive();
             startButton.setVisible(false);
             this.scene.start('GameScene');
 
         });
-
-
-    }
-
-    update() {
-        // Oyun başlangıcında yapılacak güncellemeler
     }
 }
 
@@ -128,19 +96,23 @@ class GameScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.image('cloud', 'assets/background/cloud.png');
+        this.load.image('background', 'assets/background/wizard-castle.png');
+        this.load.image('moon', 'assets/background/moon.png');
+        this.load.image('raindrop', 'assets/background/raindrop.png');
+        this.load.image('fog', 'assets/background/fog.png');
+
+
+
         this.load.image('item', 'assets/coin.png');
         this.load.image('bomb', 'assets/poison.png');
-        this.load.image('arrow', 'assets/fireball.png');
+        this.load.image('arrow', 'assets/magic-ball.png');
         this.load.image('player', 'assets/wizard.png');
-        this.load.image('background', 'assets/wizard-castle.png');
         this.load.image('explosion', 'assets/explosion.png');
-
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
         this.load.image('skor-panel', 'assets/ui/score-image.png');
         this.load.image('heart', 'assets/ui/heart.png');
-
-        this.load.audio('explosion', 'assets/sounds/bomb.mp3');
     }
 
     create() {
@@ -153,7 +125,6 @@ class GameScene extends Phaser.Scene {
 
         this.hearts = 3; // Oyuncunun canı
 
-        this.explosionSound = this.sound.add('explosion');
 
         this.physics.world.setBounds(0, 0, config.width, config.height); // Oyun alanının sınırlarını ayarla
 
@@ -184,14 +155,14 @@ class GameScene extends Phaser.Scene {
         background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
 
         //Player oluşturma
-        let player = this.physics.add.sprite(250, config.height / 2, 'player');
-        player.setDisplaySize(300, 300); // Oyuncunun boyutunu ayarla
-        player.setCollideWorldBounds(true); // Oyuncu dünya sınırlarına çarptığında duracak
-        player.body.setAllowGravity(false); // Oyuncunun yerçekimi etkisi
-        player.body.setImmovable(true); // Oyuncu hareket edemeyecek
+        this.player = this.physics.add.sprite(250, config.height / 2, 'player');
+        this.player.setDisplaySize(300, 300); // Oyuncunun boyutunu ayarla
+        this.player.setCollideWorldBounds(true); // Oyuncu dünya sınırlarına çarptığında duracak
+        this.player.body.setAllowGravity(false); // Oyuncunun yerçekimi etkisi
+        this.player.body.setImmovable(true); // Oyuncu hareket edemeyecek
         this.tweens.add({
-            targets: player,
-            y: player.y - 10,        // 10px yukarı çık
+            targets: this.player,
+            y: this.player.y - 10,        // 10px yukarı çık
             duration: 2000,
             ease: 'Sine.easeInOut', // yumuşak geçiş
             yoyo: true,
@@ -210,6 +181,8 @@ class GameScene extends Phaser.Scene {
         this.score = 0;
 
         this.addUIElements(); // UI elementlerini ekle
+
+        this.addBackgroundElements();
 
         this.isDragging = false;
         this.dragStartX = 0;
@@ -280,7 +253,7 @@ class GameScene extends Phaser.Scene {
         this.arrows.children.each((arrow) => {
             let angleRad = Math.atan2(arrow.body.velocity.y, arrow.body.velocity.x);
             let angleDeg = Phaser.Math.RadToDeg(angleRad);
-            arrow.setAngle(angleDeg - 90);
+            arrow.setAngle(angleDeg);
             if (arrow.y < -50 || arrow.y > config.height + 50) {
                 arrow.destroy();
                 console.log("arrow destroyed");
@@ -326,6 +299,23 @@ class GameScene extends Phaser.Scene {
             }
             this.bombSpawnTimer = 0;
         }
+
+        this.clouds.children.iterate((cloud) => {
+            cloud.x += 0.2;
+            if (cloud.x > config.width + 50) {
+                cloud.x = -50;
+                cloud.y = Phaser.Math.Between(50, 200);
+            }
+        });
+
+        this.fogs.children.iterate((fog) => {
+            fog.x += 0.2;
+            if (fog.x > config.width + 50) {
+                fog.x = -50;
+                fog.y = Phaser.Math.Between(config.height - 100, config.height);
+
+            }
+        });
     }
 
     addUIElements() {
@@ -333,6 +323,7 @@ class GameScene extends Phaser.Scene {
         this.skor = this.add.image(150, 80, 'skor-panel');
         this.skor.setScale(0.2); // Adjust scale as needed
         this.skor.setOrigin(0.5);
+        this.skor.setDepth(15)
 
         // Score value text
         this.itemScoreText = this.add.text(200, 80, '0', {
@@ -345,6 +336,7 @@ class GameScene extends Phaser.Scene {
         });
         this.itemScoreText.setOrigin(0, 0.5);
         this.itemScoreText.setScrollFactor(0);
+        this.itemScoreText.setDepth(15)
 
 
         this.heartIcons = [];
@@ -352,8 +344,101 @@ class GameScene extends Phaser.Scene {
             let heart = this.add.image(120 + i * 30, 160, 'heart');
             heart.setScale(0.1); // İsteğe göre ayarla
             heart.setScrollFactor(0); // Kamerayla sabit kalsın
+            heart.setDepth(15)
             this.heartIcons.push(heart);
         }
+    }
+
+    addBackgroundElements() {
+        //bulutlar
+        this.clouds = this.add.group();
+        for (let i = 0; i < 3; i++) {
+            let cloud = this.add.image(
+                Phaser.Math.Between(0, config.width),
+                Phaser.Math.Between(0, 75),
+                'cloud'
+            );
+            cloud.setAlpha(0.6);
+            cloud.setScale(Phaser.Math.FloatBetween(0.2, 0.6));
+            cloud.setDepth(10)
+            this.clouds.add(cloud);
+        }
+
+        //yıldırım
+        this.time.addEvent({
+            delay: 10000, // 10 saniye (ms cinsinden)
+            callback: this.autoLightning,
+            callbackScope: this,
+            loop: true
+        });
+
+        //sis
+        this.fogs = this.add.group();
+        for (let i = 0; i < 10; i++) {
+            let fog = this.add.image(
+                Phaser.Math.Between(0, config.width),
+                Phaser.Math.Between(config.height - 50, config.height),
+                'fog'
+            );
+            fog.setAlpha(0.1);
+            fog.setScale(Phaser.Math.FloatBetween(0.8, 1.2));
+            fog.setDepth(10)
+            this.fogs.add(fog);
+        }
+
+        //yağmur
+        let rainParticles = this.add.particles('raindrop');
+
+        rainParticles.createEmitter({
+            x: { min: 0, max: config.width },
+            y: 0,
+            lifespan: 6000,
+            speedX: { min: 0, max: -100 },
+            speedY: { min: 500, max: 800 },
+            scale: { start: 0.05, end: 0.05 },
+            quantity: 1,
+            frequency: 500, // Milisaniye cinsinden damla sıklığı (300ms'de bir damla)
+            alpha: 0.5,
+            blendMode: 'ADD'
+        });
+
+        //dolunay
+        let moon = this.add.image(config.width - 100, 100, 'moon');
+        moon.setScale(0.2);
+        moon.setAlpha(0.4);
+        moon.setScrollFactor(0); // Kamera hareket ederse sabit kalır
+        moon.setDepth(5)
+    }
+
+    autoLightning() {
+        const x = Phaser.Math.Between(50, config.width - 50);
+        const y = Phaser.Math.Between(0, 200);
+        this.drawLightning(x, y);
+    }
+
+    drawLightning(x) {
+        const graphics = this.add.graphics();
+        graphics.lineStyle(2, 0xffffff); // Beyaz çizgi
+        let startX = x;
+        let startY = 0;
+
+        for (let i = 0; i < 20; i++) {
+            let endX = startX + Phaser.Math.Between(-20, 20);
+            let endY = startY + Phaser.Math.Between(10, 30);
+
+            graphics.beginPath();
+            graphics.moveTo(startX, startY);
+            graphics.lineTo(endX, endY);
+            graphics.strokePath();
+
+            startX = endX;
+            startY = endY;
+        }
+
+        // Kısa süre sonra yok et (efekt gibi görünmesi için)
+        this.time.delayedCall(100, () => {
+            graphics.destroy();
+        });
     }
 
     // Okun gideceği yöne göre çizgi çizme
@@ -392,13 +477,15 @@ class GameScene extends Phaser.Scene {
                 break;
             }
 
-            this.trajectoryLine.strokeCircle(pointX, pointY, 2); // 2px yarıçaplı nokta
+            this.trajectoryLine.strokeCircle(pointX, pointY, 5); // 2px yarıçaplı nokta
         }
     }
 
     shootArrow(x, y) {
         let arrow = this.arrows.create(355, this.game.config.height / 2 - 120, 'arrow');
         arrow.setScale(0.1);
+        arrow.body.setCircle(200,200);
+        arrow.body.setOffset(600, 0); // Görselin içine göre konumu ayarla
         arrow.setVelocity(x, y);
     }
 
@@ -471,18 +558,33 @@ class GameScene extends Phaser.Scene {
     hitBomb(arrow, bomb) {
         bomb.destroy(); // Bombayı yok et
         arrow.destroy(); // Okun kendisini yok et
-        this.hearts--; // Canı azalt
 
-        if (this.hearts <= this.heartIcons.length && this.hearts >= 0) {
-            this.heartIcons[this.hearts].destroy();
+        if (this.hearts > 0) {
+            this.hearts--; // Canı azalt
+
+            const heartToRemove = this.heartIcons[this.hearts];
+
+            // Fade-out efekti ile kalbi yok et
+            this.tweens.add({
+                targets: heartToRemove,
+                alpha: 0,
+                duration: 300,
+                ease: 'Linear',
+                onComplete: () => {
+                    heartToRemove.destroy();
+                }
+            });
+
+            // Diziden de çıkar
             this.heartIcons.splice(this.hearts, 1);
         }
-        let explosion = this.add.image(bomb.x, bomb.y, 'explosion');
-        explosion.setScale(0.1); // İstersen ayarla
-        explosion.setDepth(10); // Önde gözükmesi için
-        this.explosionSound.play(); // Patlama sesini çal
 
-        // Patlama efekti yavaşça kaybolsun
+        // Patlama efekti oluştur
+        let explosion = this.add.image(bomb.x, bomb.y, 'explosion');
+        explosion.setScale(0.1);
+        explosion.setDepth(10);
+
+        // Patlamayı yavaşça kaybolacak şekilde animasyonla yok et
         this.tweens.add({
             targets: explosion,
             alpha: 0,
@@ -494,9 +596,10 @@ class GameScene extends Phaser.Scene {
             }
         });
 
+        // Can 0'a düşerse oyunu bitir
         if (this.hearts <= 0) {
-            this.physics.pause() // Oyun bitti sahnesine geç
-            this.sound.stopAll(); // Tüm sesleri durdur
+            this.physics.pause();
+            this.sound.stopAll();
             this.scene.start('GameOverScene', { finalScore: this.score });
         }
     }
@@ -535,21 +638,18 @@ class GameOverScene extends Phaser.Scene {
         this.load.image('game-over', 'assets/ui/game-over.png');
         this.load.image('restart-button', 'assets/ui/restart-button.png');
         this.load.image('score-image', 'assets/ui/score-image.png');    // Ses açık ikonu
-
-        this.load.audio('button-click', 'assets/sounds/button-click.mp3');
     }
 
     create(data) {
         let finalScore = data.finalScore || 0;
 
 
-        this.buttonClickSound = this.sound.add('button-click');
 
         // "Game Over" Yazısı
-        this.gameOverText = this.add.image(this.game.config.width / 2, config.height/2-100, 'game-over')
+        this.gameOverText = this.add.image(this.game.config.width / 2, config.height / 2 - 100, 'game-over')
         this.gameOverText.setOrigin(0.5, 0.5);
 
-        this.FinalScoreText = this.add.text(config.width / 2, config.height/2+200, 'Score = ' + finalScore, {
+        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 200, 'Score = ' + finalScore, {
             fontSize: '40px',
             fontFamily: 'monospace',
             fontWeight: 'bold',
@@ -561,7 +661,7 @@ class GameOverScene extends Phaser.Scene {
         this.FinalScoreText.setScrollFactor(0);
 
         // tekrar-oyna button
-        const restartButton = this.add.image(config.width / 2, config.height-100, 'restart-button');
+        const restartButton = this.add.image(config.width / 2, config.height - 100, 'restart-button');
         restartButton.setScale(0.3);
         restartButton.setInteractive({ useHandCursor: true });
 
@@ -579,7 +679,6 @@ class GameOverScene extends Phaser.Scene {
         });
 
         restartButton.on('pointerup', () => {
-            this.buttonClickSound.play();
             this.scene.start('StartScene');
         });
     }
@@ -601,8 +700,8 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 400 }, //item düşme hızını değiştirir
-            debug: false
+            gravity: { y: 0 }, //item düşme hızını değiştirir
+            debug: true
         }
     },
     scene: [StartScene, GameScene, GameOverScene]
