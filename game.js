@@ -12,7 +12,7 @@ class StartScene extends Phaser.Scene {
         this.load.image('game-title', 'assets/ui/title.png');
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
-        this.load.image('start' , 'assets/ui/start.png');
+        this.load.image('start', 'assets/ui/start.png');
     }
 
     create() {
@@ -106,7 +106,9 @@ class GameScene extends Phaser.Scene {
 
         this.load.image('item', 'assets/coin.png');
         this.load.image('bomb', 'assets/poison.png');
-        this.load.image('arrow', 'assets/magic-ball.png');
+        this.load.image('fireball-b', 'assets/fireball-b.png');
+        this.load.image('fireball-r', 'assets/fireball-r.png');
+        this.load.image('fireball-g', 'assets/fireball-g.png');
         this.load.image('player', 'assets/wizard.png');
         this.load.image('explosion', 'assets/explosion.png');
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
@@ -251,9 +253,6 @@ class GameScene extends Phaser.Scene {
 
         //oku gittiği yöne göre döndürme ve kaçan okları silme
         this.arrows.children.each((arrow) => {
-            let angleRad = Math.atan2(arrow.body.velocity.y, arrow.body.velocity.x);
-            let angleDeg = Phaser.Math.RadToDeg(angleRad);
-            arrow.setAngle(angleDeg);
             if (arrow.y < -50 || arrow.y > config.height + 50) {
                 arrow.destroy();
                 console.log("arrow destroyed");
@@ -482,10 +481,24 @@ class GameScene extends Phaser.Scene {
     }
 
     shootArrow(x, y) {
-        let arrow = this.arrows.create(355, this.game.config.height / 2 - 120, 'arrow');
+        let fireballTexture;
+        let rnd = Phaser.Math.Between(1, 3)
+        switch (rnd) {
+            case 1:
+                fireballTexture = 'fireball-g'
+                break;
+            case 2:
+                fireballTexture = 'fireball-b'
+                break;
+            case 3:
+                fireballTexture = 'fireball-r'
+                break;
+
+        }
+        let arrow = this.arrows.create(355, this.game.config.height / 2 - 120, fireballTexture);
         arrow.setScale(0.1);
-        arrow.body.setCircle(200,200);
-        arrow.body.setOffset(600, 0); // Görselin içine göre konumu ayarla
+        arrow.body.setCircle(275, 275);
+        arrow.body.setOffset(0, 0); // Görselin içine göre konumu ayarla
         arrow.setVelocity(x, y);
     }
 
