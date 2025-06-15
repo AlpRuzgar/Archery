@@ -119,6 +119,13 @@ class GameScene extends Phaser.Scene {
 
     create() {
 
+        this.input.keyboard.on('keydown-V', () => {
+            this.scene.start('WinScene');
+        });
+
+        this.input.keyboard.on('keydown-L', () => {
+            this.scene.start('GameOverScene');
+        });
 
         this.itemSpawnInterval = 1000; // item spawn aralığı
         this.itemSpawnTimer = 0;
@@ -649,7 +656,7 @@ class GameOverScene extends Phaser.Scene {
 
     preload() {
         this.load.image('game-over', 'assets/ui/game-over.png');
-        this.load.image('restart-button', 'assets/ui/restart-button.png');
+        this.load.image('restart-button', 'assets/ui/restart-red.png');
         this.load.image('score-image', 'assets/ui/score-image.png');    // Ses açık ikonu
     }
 
@@ -659,45 +666,104 @@ class GameOverScene extends Phaser.Scene {
 
 
         // "Game Over" Yazısı
-        this.gameOverText = this.add.image(this.game.config.width / 2, config.height / 2 - 100, 'game-over')
+        this.gameOverText = this.add.image(this.game.config.width / 2, config.height / 2 - 200, 'game-over')
         this.gameOverText.setOrigin(0.5, 0.5);
+        this.gameOverText.setScale(0.75);
 
-        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 200, 'Score = ' + finalScore, {
-            fontSize: '40px',
-            fontFamily: 'monospace',
+        //skor yazısı
+        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 120, 'Score : ' + finalScore, {
+            fontSize: '50px',
             fontWeight: 'bold',
-            fill: '#d6eaf8',
-            stroke: '#5DADE2',
+            fill: '#d00000',
+            stroke: '#e85d04',
             strokeThickness: 4
         });
         this.FinalScoreText.setOrigin(0.5, 0.5);
         this.FinalScoreText.setScrollFactor(0);
+        this.FinalScoreText.setDepth(1);
 
         // tekrar-oyna button
-        const restartButton = this.add.image(config.width / 2, config.height - 100, 'restart-button');
+        const restartButton = this.add.image(config.width / 2, config.height - 200, 'restart-button');
         restartButton.setScale(0.3);
         restartButton.setInteractive({ useHandCursor: true });
 
-        // Button interactions
+        // Buton için pulse efekti
+        let buttonTween = this.tweens.add({
+            targets: [restartButton],
+            scaleX: { from: restartButton.scaleX, to: restartButton.scaleX * 1.1 },
+            scaleY: { from: restartButton.scaleY, to: restartButton.scaleY * 1.1 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Buton efektleri
         restartButton.on('pointerover', () => {
-            restartButton.setScale(0.4);
+            restartButton.setScale(restartButton.scaleX * 1.1);
+            buttonTween.pause();
         });
 
         restartButton.on('pointerout', () => {
-            restartButton.setScale(0.35);
+            restartButton.setScale(restartButton.scaleX * 1.1);
+            buttonTween.resume();
         });
 
         restartButton.on('pointerdown', () => {
-            restartButton.setScale(0.3);
-        });
+            restartButton.disableInteractive();
+            restartButton.setVisible(false);
+            this.scene.start('GameScene');
 
-        restartButton.on('pointerup', () => {
-            this.scene.start('StartScene');
         });
     }
+}
 
-    update() {
-        // Oyun bitti ekranını güncelleyin
+class WinScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'WinScene' });
+    }
+
+    preload() {
+        this.load.image('win-text', 'assets/ui/win.png');
+        this.load.image('restart','assets/ui/restart-green.png')
+    }
+
+    create() {
+
+        //kazandınız yazısı
+        this.winText = this.add.image(config.width / 2, config.height / 2 - 200, 'win-text');
+
+        // tekrar-oyna button
+        const restartButton = this.add.image(config.width / 2, config.height - 200, 'restart');
+        restartButton.setScale(0.3);
+        restartButton.setInteractive({ useHandCursor: true });
+
+        // Buton için pulse efekti
+        let buttonTween = this.tweens.add({
+            targets: [restartButton],
+            scaleX: { from: restartButton.scaleX, to: restartButton.scaleX * 1.1 },
+            scaleY: { from: restartButton.scaleY, to: restartButton.scaleY * 1.1 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Buton efektleri
+        restartButton.on('pointerover', () => {
+            restartButton.setScale(0.45);
+            buttonTween.pause();
+        });
+
+        restartButton.on('pointerout', () => {
+            restartButton.setScale(0.4);
+            buttonTween.resume();
+        });
+
+        restartButton.on('pointerdown', () => {
+            restartButton.disableInteractive();
+            restartButton.setVisible(false);
+            this.scene.start('GameScene');
+
+        });
     }
 }
 
@@ -713,16 +779,15 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 0 }, //item düşme hızını değiştirir
+            gravity: { y: 200 }, //item düşme hızını değiştirir
             debug: true
         }
     },
-    scene: [StartScene, GameScene, GameOverScene]
+    scene: [StartScene, GameScene, GameOverScene, WinScene]
 };
 
 const game = new Phaser.Game(config);
 
-//TODO: game over ve win sahnelerini ekle
+//TODO: kazanma şartı ekle
+//TODO: ateş toplarına dönme ekle
 //TODO: sesleri ekle
-//TODO: zorluk ekle
-//TODO: ui elementleri ekle
