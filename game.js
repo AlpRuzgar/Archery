@@ -101,8 +101,7 @@ class GameScene extends Phaser.Scene {
         this.load.image('moon', 'assets/background/moon.png');
         this.load.image('raindrop', 'assets/background/raindrop.png');
         this.load.image('fog', 'assets/background/fog.png');
-
-
+        this.load.image('background-space', 'assets/background/background-space.png')
 
         this.load.image('item', 'assets/coin.png');
         this.load.image('bomb', 'assets/poison.png');
@@ -115,11 +114,17 @@ class GameScene extends Phaser.Scene {
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
         this.load.image('skor-panel', 'assets/ui/score-image.png');
         this.load.image('heart', 'assets/ui/heart.png');
+        this.load.image('trophy', 'assets/trophy.png')
     }
 
     create() {
+        this.gameActive = true;
 
-        this.input.keyboard.on('keydown-V', () => {
+        this.input.keyboard.on('keydown-J', () => {
+            this.handleGameWin();
+        });
+
+        this.input.keyboard.on('keydown-K', () => {
             this.scene.start('WinScene');
         });
 
@@ -160,8 +165,19 @@ class GameScene extends Phaser.Scene {
 
 
         // Arka plan resmi
-        let background = this.add.image(config.width / 2, config.height / 2, 'background');
-        background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
+        this.background = this.add.image(config.width / 2, config.height / 2, 'background');
+        this.background.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
+
+        this.backgroundSpace = this.add.image(config.width / 2, config.height / 2, 'background-space');
+        this.backgroundSpace.setDisplaySize(config.width, config.height); // Arka planın boyutunu ayarla
+        this.backgroundSpace.setDepth(-1);
+
+        // tam ekran beyaz rectangle (fade için)
+        this.fadeRect = this.add
+            .rectangle(0, 0, config.width, config.height, 0xffffff)
+            .setOrigin(0)
+            .setDepth(200);
+        this.fadeRect.alpha = 0;
 
         //Player oluşturma
         this.player = this.physics.add.sprite(250, config.height / 2, 'player');
@@ -504,6 +520,7 @@ class GameScene extends Phaser.Scene {
         }
         let arrow = this.arrows.create(355, this.game.config.height / 2 - 120, fireballTexture);
         arrow.setScale(0.1);
+        arrow.setDepth(101);
         arrow.body.setCircle(275, 275);
         arrow.body.setOffset(0, 0); // Görselin içine göre konumu ayarla
         arrow.setVelocity(x, y);
@@ -511,6 +528,8 @@ class GameScene extends Phaser.Scene {
 
     // Item ekleme
     addItem(locY) {
+        if (!this.gameActive) return;
+
         let xArray = []; // X koordinatları için bir dizi oluştur
         let y;
         let velocity;
@@ -539,6 +558,8 @@ class GameScene extends Phaser.Scene {
 
     //bomba ekleme
     addBomb(locY) {
+        if (!this.gameActive) return;
+
         let xArray = []; // X koordinatları için bir dizi oluştur
         let y;
         let velocity;
@@ -572,6 +593,10 @@ class GameScene extends Phaser.Scene {
         arrow.destroy(); // Okun kendisini yok et
         this.score += 10; // Skoru artır
         this.itemScoreText.setText(this.score); // Yazıyı güncelle
+
+        if (this.score >= 500) {
+            this.handleGameWin();
+        }
     }
 
     //bomba vurma işlemi
@@ -618,10 +643,57 @@ class GameScene extends Phaser.Scene {
 
         // Can 0'a düşerse oyunu bitir
         if (this.hearts <= 0) {
-            this.physics.pause();
+            this.gameActive = false;
+            this.clearScreen();
             this.sound.stopAll();
             this.scene.start('GameOverScene', { finalScore: this.score });
         }
+    }
+
+    clearScreen() {
+        this.items.clear(true, true);
+        this.bombs.clear(true, true);
+        this.arrows.clear(true, true);
+    }
+
+    handleGameWin() {
+        // 1) Anında beyazı “yak”
+        this.fadeRect.alpha = 1;
+
+        // 2) Arkaplanları değiştir
+        this.backgroundSpace.setDepth(100);
+        this.player.setDepth(100);
+        this.trajectoryLine.setDepth(100);
+
+        // 3) 1 saniyede beyazı fade-out yap
+        this.tweens.add({
+            targets: this.fadeRect,
+            alpha: 0,
+            duration: 3000,
+            ease: 'Linear'
+        });
+
+
+        this.gameActive = false;
+        this.clearScreen();
+        this.trophy = this.physics.add.sprite(config.width / 2 + 200, config.height / 2, 'trophy');
+        this.trophy.setDepth(100);
+        this.trophy.setScale(0.5)
+        this.trophy.body.setAllowGravity(false);
+
+        this.tweens.add({
+            targets: this.trophy,
+            y: this.trophy.y - 10,         // yukarı ne kadar çıkacağı
+            duration: 1000,
+            ease: 'Sine.easeInOut',     // yumuşak geçiş eğrisi
+            yoyo: true,                 // geri dönsün
+            repeat: -1                  // sonsuza kadar
+        });
+
+        this.physics.add.overlap(this.arrows, this.trophy, () => {
+            this.scene.start('WinScene');
+        });
+
     }
 
     setDifficulty(level) {
@@ -724,7 +796,7 @@ class WinScene extends Phaser.Scene {
 
     preload() {
         this.load.image('win-text', 'assets/ui/win.png');
-        this.load.image('restart','assets/ui/restart-green.png')
+        this.load.image('restart', 'assets/ui/restart-green.png')
     }
 
     create() {
@@ -780,7 +852,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 200 }, //item düşme hızını değiştirir
-            debug: true
+            debug: false
         }
     },
     scene: [StartScene, GameScene, GameOverScene, WinScene]
@@ -788,6 +860,6 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-//TODO: kazanma şartı ekle
 //TODO: ateş toplarına dönme ekle
 //TODO: sesleri ekle
+//* J -> uzay kısmı K -> win ekranı L -> gameover ekranı 
