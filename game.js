@@ -132,9 +132,9 @@ class GameScene extends Phaser.Scene {
             this.scene.start('GameOverScene');
         });
 
-        this.itemSpawnInterval = 1000; // item spawn aralığı
+        this.itemSpawnInterval; // item spawn aralığı
         this.itemSpawnTimer = 0;
-        this.bombSpawnInterval = 2000; // 2 saniyede bir bomba spawn etme
+        this.bombSpawnInterval; // 2 saniyede bir bomba spawn etme
         this.bombSpawnTimer = 0;
 
         this.hearts = 3; // Oyuncunun canı
@@ -204,6 +204,35 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.arrows, this.bombs, this.hitBomb, null, this);
 
         this.score = 0;
+
+        this.initialTime = 15;  // saniye cinsinden başlangıç süresi
+
+        this.timerText = this.add.text(300, 60, this.initialTime, {
+            fontSize: '30px',
+            fontFamily: 'monospace',
+            fontWeight: 'bold',
+            fill: '#d6eaf8',
+            stroke: '#5DADE2',
+            strokeThickness: 4,
+        })
+        this.timerText.setDepth(15)
+
+        // Her saniye bir kere çalışacak bir event oluştur
+        this.time.addEvent({
+            delay: 1000,                // ms cinsinden: 1 saniye
+            callback: () => {
+                this.initialTime--;
+                this.timerText.setText(this.initialTime);
+
+                if (this.initialTime <= 0) {
+                    // Süre bitti: oyun bitti sahnesine geç
+                    this.physics.pause();
+                    this.scene.start('GameOverScene', { finalScore: this.score });
+                }
+            },
+            callbackScope: this,
+            loop: true
+        });
 
         this.addUIElements(); // UI elementlerini ekle
 
@@ -348,7 +377,7 @@ class GameScene extends Phaser.Scene {
         this.skor.setDepth(15)
 
         // Score value text
-        this.itemScoreText = this.add.text(200, 80, '0', {
+        this.itemScoreText = this.add.text(190, 80, '0', {
             fontSize: '30px',
             fontFamily: 'monospace',
             fontWeight: 'bold',
@@ -359,7 +388,6 @@ class GameScene extends Phaser.Scene {
         this.itemScoreText.setOrigin(0, 0.5);
         this.itemScoreText.setScrollFactor(0);
         this.itemScoreText.setDepth(15)
-
 
         this.heartIcons = [];
         for (let i = 0; i < this.hearts; i++) {
@@ -524,6 +552,7 @@ class GameScene extends Phaser.Scene {
         arrow.body.setCircle(275, 275);
         arrow.body.setOffset(0, 0); // Görselin içine göre konumu ayarla
         arrow.setVelocity(x, y);
+        arrow.setAngularVelocity(Phaser.Math.Between(-300,300))
     }
 
     // Item ekleme
@@ -592,6 +621,7 @@ class GameScene extends Phaser.Scene {
         item.destroy(); // Itemi yok et
         arrow.destroy(); // Okun kendisini yok et
         this.score += 10; // Skoru artır
+        this.initialTime += 3;
         this.itemScoreText.setText(this.score); // Yazıyı güncelle
 
         if (this.score >= 500) {
