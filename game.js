@@ -757,7 +757,7 @@ class GameOverScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('game-over', 'assets/ui/game-over.png');
+        this.load.image('game-over', 'assets/ui/gameover-screen.png');
         this.load.image('restart-button', 'assets/ui/restart-red.png');
         this.load.image('score-image', 'assets/ui/score-image.png');    // Ses açık ikonu
     }
@@ -768,16 +768,15 @@ class GameOverScene extends Phaser.Scene {
 
 
         // "Game Over" Yazısı
-        this.gameOverText = this.add.image(this.game.config.width / 2, config.height / 2 - 200, 'game-over')
+        this.gameOverText = this.add.image(config.width / 2, config.height / 2, 'game-over')
         this.gameOverText.setOrigin(0.5, 0.5);
-        this.gameOverText.setScale(0.75);
 
         //skor yazısı
-        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 120, 'Score : ' + finalScore, {
+        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 220, 'Score : ' + finalScore, {
             fontSize: '50px',
             fontWeight: 'bold',
-            fill: '#d00000',
-            stroke: '#e85d04',
+            fill: '#fe3a29',
+            stroke: '#fe3a29',
             strokeThickness: 4
         });
         this.FinalScoreText.setOrigin(0.5, 0.5);
@@ -825,14 +824,14 @@ class WinScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('win-text', 'assets/ui/win.png');
+        this.load.image('win', 'assets/ui/win-screen.png');
         this.load.image('restart', 'assets/ui/restart-green.png')
     }
 
     create() {
 
         //kazandınız yazısı
-        this.winText = this.add.image(config.width / 2, config.height / 2 - 200, 'win-text');
+        this.winText = this.add.image(config.width / 2, config.height / 2, 'win');
 
         // tekrar-oyna button
         const restartButton = this.add.image(config.width / 2, config.height - 200, 'restart');
@@ -851,7 +850,7 @@ class WinScene extends Phaser.Scene {
 
         // Buton efektleri
         restartButton.on('pointerover', () => {
-            restartButton.setScale(0.45);
+            restartButton.setScale(0.4);
             buttonTween.pause();
         });
 
