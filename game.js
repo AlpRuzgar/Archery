@@ -211,8 +211,8 @@ class GameScene extends Phaser.Scene {
             fontSize: '30px',
             fontFamily: 'monospace',
             fontWeight: 'bold',
-            fill: '#d6eaf8',
-            stroke: '#5DADE2',
+            fill: '#ffffff',
+            stroke: '#00ff00',
             strokeThickness: 4,
         })
         this.timerText.setDepth(15)
@@ -552,7 +552,7 @@ class GameScene extends Phaser.Scene {
         arrow.body.setCircle(275, 275);
         arrow.body.setOffset(0, 0); // Görselin içine göre konumu ayarla
         arrow.setVelocity(x, y);
-        arrow.setAngularVelocity(Phaser.Math.Between(-300,300))
+        arrow.setAngularVelocity(Phaser.Math.Between(-300, 300))
     }
 
     // Item ekleme
@@ -581,6 +581,7 @@ class GameScene extends Phaser.Scene {
         let item = this.items.create(x, y, 'item');
         item.from = locY; // Itemin konumunu kaydet
         item.scale = 0.2; // Item boyutunu ayarla
+        item.setDepth(20);
         item.body.setAllowGravity(false); // Itemlerin yerçekimi etkisi olmasın
         item.setVelocityY(velocity)
     }
@@ -618,11 +619,69 @@ class GameScene extends Phaser.Scene {
 
     // Iteme vurma işlemi
     hitItem(arrow, item) {
-        item.destroy(); // Itemi yok et
-        arrow.destroy(); // Okun kendisini yok et
-        this.score += 10; // Skoru artır
-        this.initialTime += 3;
-        this.itemScoreText.setText(this.score); // Yazıyı güncelle
+        // 1) Varolan skor mantığı
+        item.destroy();
+        arrow.destroy();
+        this.score += 10;
+        this.itemScoreText.setText(this.score);
+
+        // 2) Zaman bonusu
+        const bonus = 3;                     // Her coin vurduğunda eklenen saniye
+        this.initialTime += bonus;          // sayacı güncelle
+
+        // 3) Timer metnine pulse & renk animasyonu
+        this.tweens.add({
+            targets: this.timerText,
+            scale: 1.4,                       // biraz büyü, sonra eski haline dön
+            duration: 200,
+            yoyo: true,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Renk geçişi
+        this.tweens.addCounter({
+            from: 0, to: 100,
+            duration: 400,
+            onUpdate: tween => {
+                const v = tween.getValue();
+                const c = Phaser.Display.Color.Interpolate.ColorWithColor(
+                    new Phaser.Display.Color(255, 255, 0),  // sarı
+                    new Phaser.Display.Color(0, 255, 0),    // yeşil
+                    100, v
+                );
+                const hex = Phaser.Display.Color.GetColor(c.r, c.g, c.b);
+                this.timerText.setStyle({ color: '#' + hex.toString(16).padStart(6, '0') });
+            },
+            onComplete: () => {
+                this.timerText.setStyle({ color: '#ffffff' }); // orijinal yeşile dönüş
+            }
+        });
+
+        // 4) Floating “+Xs” text efekti
+        const fx = this.add.text(
+            this.timerText.x + this.timerText.width + 8,
+            this.timerText.y,
+            `+${bonus}s`,
+            {
+                fontSize: '24px',
+                fontFamily: 'monospace',
+                fill: '#ffffff',
+                stroke: '#00ff00',
+                strokeThickness: 3
+            }
+        )
+            .setDepth(20)
+            .setOrigin(0, 0.5);
+
+        this.tweens.add({
+            targets: fx,
+            y: fx.y - 30,    // yukarıya kaydır
+            alpha: 0,        // şeffaflaştır
+            duration: 800,
+            ease: 'Cubic.easeOut',
+            onComplete: () => fx.destroy()
+        });
+
 
         if (this.score >= 500) {
             this.handleGameWin();
