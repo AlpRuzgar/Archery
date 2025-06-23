@@ -13,10 +13,23 @@ class StartScene extends Phaser.Scene {
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
         this.load.image('start', 'assets/ui/start.png');
+
+        this.load.audio('background-music', 'assets/audio/background-music.mp3');
+        this.load.audio('button-click', 'assets/audio/button-click.mp3');
     }
 
     create() {
         this.background = this.add.image(config.width / 2, config.height / 2, 'start')
+
+        // Arkaplan müziği başlat
+        this.backgroundMusic = this.sound.add('background-music', {
+            volume: 0.3,
+            loop: true
+        });
+        this.backgroundMusic.play();
+
+        // Button click sesi
+        this.buttonClickSound = this.sound.add('button-click', { volume: 0.7 });
 
         // SES BUTONU
         this.isSoundOn = true;
@@ -81,8 +94,12 @@ class StartScene extends Phaser.Scene {
         });
 
         startButton.on('pointerdown', () => {
+            // Button click sesi çal
+            this.buttonClickSound.play();
             startButton.disableInteractive();
             startButton.setVisible(false);
+            // Menü müziğini durdur
+            this.backgroundMusic.stop();
             this.scene.start('GameScene');
 
         });
@@ -115,10 +132,32 @@ class GameScene extends Phaser.Scene {
         this.load.image('skor-panel', 'assets/ui/score-image.png');
         this.load.image('heart', 'assets/ui/heart.png');
         this.load.image('trophy', 'assets/trophy.png')
+
+        // Tüm ses dosyaları
+        this.load.audio('background-music', 'assets/audio/background-music.mp3');
+        this.load.audio('coin-sound', 'assets/audio/coin.mp3');
+        this.load.audio('bomb-sound', 'assets/audio/explosion.mp3');
+        this.load.audio('shoot-sound', 'assets/audio/shoot.mp3');
+        this.load.audio('level-complete', 'assets/audio/level-complete.mp3');
+        this.load.audio('lightning-sound', 'assets/audio/lightning.mp3');
     }
 
     create() {
         this.gameActive = true;
+
+        // Arkaplan müziği başlat
+        this.backgroundMusic = this.sound.add('background-music', {
+            volume: 0.2,
+            loop: true
+        });
+        this.backgroundMusic.play();
+
+        // Ses efektlerini yükle
+        this.coinSound = this.sound.add('coin-sound', { volume: 0.1 });
+        this.bombSound = this.sound.add('bomb-sound', { volume: 0.6 });
+        this.shootSound = this.sound.add('shoot-sound', { volume: 0.4 });
+        this.levelCompleteSound = this.sound.add('level-complete', { volume: 0.6 });
+        this.lightningSound = this.sound.add('lightning-sound', { volume: 0.7 });
 
         this.input.keyboard.on('keydown-J', () => {
             this.handleGameWin();
@@ -126,10 +165,12 @@ class GameScene extends Phaser.Scene {
 
         this.input.keyboard.on('keydown-K', () => {
             this.scene.start('WinScene');
+            this.backgroundMusic.stop();
         });
 
         this.input.keyboard.on('keydown-L', () => {
             this.scene.start('GameOverScene');
+            this.backgroundMusic.stop();
         });
 
         this.itemSpawnInterval; // item spawn aralığı
@@ -218,7 +259,7 @@ class GameScene extends Phaser.Scene {
         this.timerText.setDepth(15)
 
         // Her saniye bir kere çalışacak bir event oluştur
-        this.time.addEvent({
+        this.countdownTimer = this.time.addEvent({
             delay: 1000,                // ms cinsinden: 1 saniye
             callback: () => {
                 this.initialTime--;
@@ -227,6 +268,8 @@ class GameScene extends Phaser.Scene {
                 if (this.initialTime <= 0) {
                     // Süre bitti: oyun bitti sahnesine geç
                     this.physics.pause();
+                    this.backgroundMusic.stop();
+                    this.lightningTimer.remove();
                     this.scene.start('GameOverScene', { finalScore: this.score });
                 }
             },
@@ -415,7 +458,7 @@ class GameScene extends Phaser.Scene {
         }
 
         //yıldırım
-        this.time.addEvent({
+        this.lightningTimer = this.time.addEvent({
             delay: 10000, // 10 saniye (ms cinsinden)
             callback: this.autoLightning,
             callbackScope: this,
@@ -461,6 +504,8 @@ class GameScene extends Phaser.Scene {
     }
 
     autoLightning() {
+        // Yıldırım sesi çal
+        this.lightningSound.play();
         const x = Phaser.Math.Between(50, config.width - 50);
         const y = Phaser.Math.Between(0, 200);
         this.drawLightning(x, y);
@@ -509,7 +554,7 @@ class GameScene extends Phaser.Scene {
         );
         let hexColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
 
-        this.trajectoryLine.lineStyle(2, hexColor, 1);
+        this.trajectoryLine.lineStyle(2, 0xffffff, 1);
 
         // Nokta çizimi
         for (let t = 0; t < totalTime; t += timeStep) {
@@ -532,6 +577,8 @@ class GameScene extends Phaser.Scene {
     }
 
     shootArrow(x, y) {
+        // Ateş etme sesi çal
+        this.shootSound.play();
         let fireballTexture;
         let rnd = Phaser.Math.Between(1, 3)
         switch (rnd) {
@@ -553,6 +600,36 @@ class GameScene extends Phaser.Scene {
         arrow.body.setOffset(0, 0); // Görselin içine göre konumu ayarla
         arrow.setVelocity(x, y);
         arrow.setAngularVelocity(Phaser.Math.Between(-300, 300))
+
+        // SOPA GERİ GİTME ANİMASYONU:
+        let originalX = this.player.x;
+        this.tweens.add({
+            targets: this.player,
+            x: originalX - 15,  // 15 piksel geri git
+            duration: 80,       // 80ms'de geri git
+            ease: 'Power2',
+            yoyo: true,         // geri dön
+            onComplete: () => {
+                this.player.x = originalX; // Orijinal pozisyona kesinlikle dön
+            }
+        });
+
+        // ATEŞ EFEKTİ EKLE:
+        let muzzleFlash = this.add.circle(355, this.game.config.height / 2 - 120, 30, 0xffffff);
+        muzzleFlash.setDepth(102);
+        muzzleFlash.setAlpha(0.8);
+
+        this.tweens.add({
+            targets: muzzleFlash,
+            scaleX: { from: 0.5, to: 2 },
+            scaleY: { from: 0.5, to: 2 },
+            alpha: { from: 0.8, to: 0 },
+            duration: 150,
+            ease: 'Power2',
+            onComplete: () => {
+                muzzleFlash.destroy();
+            }
+        });
     }
 
     // Item ekleme
@@ -619,6 +696,8 @@ class GameScene extends Phaser.Scene {
 
     // Iteme vurma işlemi
     hitItem(arrow, item) {
+        // Coin toplama sesi çal
+        this.coinSound.play();
         // 1) Varolan skor mantığı
         item.destroy();
         arrow.destroy();
@@ -690,6 +769,8 @@ class GameScene extends Phaser.Scene {
 
     //bomba vurma işlemi
     hitBomb(arrow, bomb) {
+        // Bomba patlaması sesi çal
+        this.bombSound.play();
         bomb.destroy(); // Bombayı yok et
         arrow.destroy(); // Okun kendisini yok et
 
@@ -735,6 +816,7 @@ class GameScene extends Phaser.Scene {
             this.gameActive = false;
             this.clearScreen();
             this.sound.stopAll();
+            this.lightningTimer.remove();
             this.scene.start('GameOverScene', { finalScore: this.score });
         }
     }
@@ -746,6 +828,11 @@ class GameScene extends Phaser.Scene {
     }
 
     handleGameWin() {
+        // Seviye tamamlama sesi çal
+        this.levelCompleteSound.play();
+        this.backgroundMusic.stop();
+        this.lightningTimer.remove();
+        this.countdownTimer.remove();
         // 1) Anında beyazı “yak”
         this.fadeRect.alpha = 1;
 
@@ -819,12 +906,20 @@ class GameOverScene extends Phaser.Scene {
         this.load.image('game-over', 'assets/ui/gameover-screen.png');
         this.load.image('restart-button', 'assets/ui/restart-red.png');
         this.load.image('score-image', 'assets/ui/score-image.png');    // Ses açık ikonu
+
+        // Ses dosyası
+        this.load.audio('game-over-sound', 'assets/audio/game-over.mp3');
+        this.load.audio('button-click', 'assets/audio/button-click.mp3');
     }
 
     create(data) {
         let finalScore = data.finalScore || 0;
 
+        // Game over sesi çal
+        this.gameOverSound = this.sound.add('game-over-sound', { volume: 0.5 });
+        this.gameOverSound.play();
 
+        this.buttonClickSound = this.sound.add('button-click', { volume: 0.7 });
 
         // "Game Over" Yazısı
         this.gameOverText = this.add.image(config.width / 2, config.height / 2, 'game-over')
@@ -869,6 +964,7 @@ class GameOverScene extends Phaser.Scene {
         });
 
         restartButton.on('pointerdown', () => {
+            this.buttonClickSound.play();
             restartButton.disableInteractive();
             restartButton.setVisible(false);
             this.scene.start('GameScene');
@@ -885,9 +981,19 @@ class WinScene extends Phaser.Scene {
     preload() {
         this.load.image('win', 'assets/ui/win-screen.png');
         this.load.image('restart', 'assets/ui/restart-green.png')
+
+        // Ses dosyası
+        this.load.audio('win-sound', 'assets/audio/victory.mp3');
+        this.load.audio('button-click', 'assets/audio/button-click.mp3');
     }
 
     create() {
+
+        // Kazanma sesi çal
+        this.winSound = this.sound.add('win-sound', { volume: 0.6 });
+        this.winSound.play();
+
+        this.buttonClickSound = this.sound.add('button-click', { volume: 0.7 });
 
         //kazandınız yazısı
         this.winText = this.add.image(config.width / 2, config.height / 2, 'win');
@@ -919,6 +1025,7 @@ class WinScene extends Phaser.Scene {
         });
 
         restartButton.on('pointerdown', () => {
+            this.buttonClickSound.play();
             restartButton.disableInteractive();
             restartButton.setVisible(false);
             this.scene.start('GameScene');
