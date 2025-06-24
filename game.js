@@ -9,7 +9,6 @@ class StartScene extends Phaser.Scene {
 
     preload() {
         this.load.image('start-button', 'assets/ui/start-button.png');
-        this.load.image('game-title', 'assets/ui/title.png');
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
         this.load.image('start', 'assets/ui/start.png');
@@ -169,8 +168,7 @@ class GameScene extends Phaser.Scene {
         });
 
         this.input.keyboard.on('keydown-L', () => {
-            this.scene.start('GameOverScene');
-            this.backgroundMusic.stop();
+            this.handleGameOver();
         });
 
         this.itemSpawnInterval; // item spawn aralığı
@@ -178,7 +176,17 @@ class GameScene extends Phaser.Scene {
         this.bombSpawnInterval; // 2 saniyede bir bomba spawn etme
         this.bombSpawnTimer = 0;
 
+        this.score = 0;
+        this.initialTime = 15;  // saniye cinsinden başlangıç süresi
         this.hearts = 3; // Oyuncunun canı
+        this.arrowsFired = 0;
+        this.itemsSpawned = 0;
+        this.bombsSpawned = 0;
+        this.itemsHit = 0;
+        this.bombsHit = 0;
+        this.startTime = Date.now();
+        this.durationMs;
+        this.didWin = false
 
 
         this.physics.world.setBounds(0, 0, config.width, config.height); // Oyun alanının sınırlarını ayarla
@@ -244,10 +252,6 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.arrows, this.items, this.hitItem, null, this);
         this.physics.add.overlap(this.arrows, this.bombs, this.hitBomb, null, this);
 
-        this.score = 0;
-
-        this.initialTime = 15;  // saniye cinsinden başlangıç süresi
-
         this.timerText = this.add.text(300, 60, this.initialTime, {
             fontSize: '30px',
             fontFamily: 'monospace',
@@ -266,11 +270,9 @@ class GameScene extends Phaser.Scene {
                 this.timerText.setText(this.initialTime);
 
                 if (this.initialTime <= 0) {
-                    // Süre bitti: oyun bitti sahnesine geç
-                    this.physics.pause();
-                    this.backgroundMusic.stop();
-                    this.lightningTimer.remove();
-                    this.scene.start('GameOverScene', { finalScore: this.score });
+                    // Süre bitti: oyun bitti sahnesine ge
+                    this.handleGameOver();
+
                 }
             },
             callbackScope: this,
@@ -350,7 +352,6 @@ class GameScene extends Phaser.Scene {
         this.arrows.children.each((arrow) => {
             if (arrow.y < -50 || arrow.y > config.height + 50) {
                 arrow.destroy();
-                console.log("arrow destroyed");
             }
         });
 
@@ -601,6 +602,7 @@ class GameScene extends Phaser.Scene {
         arrow.setVelocity(x, y);
         arrow.setAngularVelocity(Phaser.Math.Between(-300, 300))
 
+
         // SOPA GERİ GİTME ANİMASYONU:
         let originalX = this.player.x;
         this.tweens.add({
@@ -630,6 +632,8 @@ class GameScene extends Phaser.Scene {
                 muzzleFlash.destroy();
             }
         });
+
+        this.arrowsFired++;
     }
 
     // Item ekleme
@@ -661,6 +665,7 @@ class GameScene extends Phaser.Scene {
         item.setDepth(20);
         item.body.setAllowGravity(false); // Itemlerin yerçekimi etkisi olmasın
         item.setVelocityY(velocity)
+        this.itemsSpawned++;
     }
 
     //bomba ekleme
@@ -692,6 +697,7 @@ class GameScene extends Phaser.Scene {
         bomb.setAngularVelocity(Phaser.Math.Between(-100, 100)); // Bombanın rastgele dönmesini sağla
         bomb.body.setAllowGravity(false); // Bombaların yerçekimi etkisi olmasın
         bomb.setVelocityY(velocity);
+        this.bombsSpawned++;
     }
 
     // Iteme vurma işlemi
@@ -699,19 +705,20 @@ class GameScene extends Phaser.Scene {
         // Coin toplama sesi çal
         this.coinSound.play();
         // 1) Varolan skor mantığı
+        this.itemsHit++;
         item.destroy();
         arrow.destroy();
         this.score += 10;
         this.itemScoreText.setText(this.score);
 
         // 2) Zaman bonusu
-        const bonus = 3;                     // Her coin vurduğunda eklenen saniye
-        this.initialTime += bonus;          // sayacı güncelle
+        const bonus = 3;
+        this.initialTime += bonus;
 
         // 3) Timer metnine pulse & renk animasyonu
         this.tweens.add({
             targets: this.timerText,
-            scale: 1.4,                       // biraz büyü, sonra eski haline dön
+            scale: 1.4,
             duration: 200,
             yoyo: true,
             ease: 'Sine.easeInOut'
@@ -773,6 +780,7 @@ class GameScene extends Phaser.Scene {
         this.bombSound.play();
         bomb.destroy(); // Bombayı yok et
         arrow.destroy(); // Okun kendisini yok et
+        this.bombsHit++;
 
         if (this.hearts > 0) {
             this.hearts--; // Canı azalt
@@ -813,11 +821,7 @@ class GameScene extends Phaser.Scene {
 
         // Can 0'a düşerse oyunu bitir
         if (this.hearts <= 0) {
-            this.gameActive = false;
-            this.clearScreen();
-            this.sound.stopAll();
-            this.lightningTimer.remove();
-            this.scene.start('GameOverScene', { finalScore: this.score });
+          this.handleGameOver();
         }
     }
 
@@ -825,6 +829,23 @@ class GameScene extends Phaser.Scene {
         this.items.clear(true, true);
         this.bombs.clear(true, true);
         this.arrows.clear(true, true);
+    }
+
+    handleGameOver() {
+        this.gameActive = false;
+        this.clearScreen();
+        this.sound.stopAll();
+        this.scene.start('GameOverScene', {
+            finalScore: this.score,
+            heartsLeft: this.hearts,
+            arrowsFired: this.arrowsFired,
+            itemsSpawned: this.itemsSpawned,
+            bombsSpawned: this.bombsSpawned,
+            itemsHit: this.itemsHit,
+            bombsHit: this.bombsHit,
+            durationMs: this.durationMs,
+            didWin: this.didWin,
+        });
     }
 
     handleGameWin() {
@@ -835,7 +856,6 @@ class GameScene extends Phaser.Scene {
         this.countdownTimer.remove();
         // 1) Anında beyazı “yak”
         this.fadeRect.alpha = 1;
-
         // 2) Arkaplanları değiştir
         this.backgroundSpace.setDepth(100);
         this.player.setDepth(100);
@@ -851,6 +871,8 @@ class GameScene extends Phaser.Scene {
 
 
         this.gameActive = false;
+        this.didWin = true;
+
         this.clearScreen();
         this.trophy = this.physics.add.sprite(config.width / 2 + 200, config.height / 2, 'trophy');
         this.trophy.setDepth(100);
@@ -867,7 +889,17 @@ class GameScene extends Phaser.Scene {
         });
 
         this.physics.add.overlap(this.arrows, this.trophy, () => {
-            this.scene.start('WinScene');
+            this.scene.start('WinScene', {
+                finalScore: this.score,
+                heartsLeft: this.hearts,
+                arrowsFired: this.arrowsFired,
+                itemsSpawned: this.itemsSpawned,
+                bombsSpawned: this.bombsSpawned,
+                itemsHit: this.itemsHit,
+                bombsHit: this.bombsHit,
+                durationMs: this.durationMs,
+                didWin: this.didWin,
+            });
         });
 
     }
@@ -911,22 +943,37 @@ class GameOverScene extends Phaser.Scene {
         this.load.audio('game-over-sound', 'assets/audio/game-over.mp3');
         this.load.audio('button-click', 'assets/audio/button-click.mp3');
     }
+  
+  init(data) {
+        this.finalScore = data.finalScore;
+        this.heartsLeft = data.heartsLeft;
+        this.arrowsFired = data.arrowsFired;
+        this.itemsSpawned = data.itemsSpawned;
+        this.bombsSpawned = data.bombsSpawned;
+        this.itemsHit = data.itemsHit;
+        this.bombsHit = data.bombsHit;
+        this.durationMs = data.durationMs;
+        this.didWin = data.didWin;
+    }
 
-    create(data) {
-        let finalScore = data.finalScore || 0;
+    create() {
 
-        // Game over sesi çal
+        
+
+    
+
+    create() {
+      // Game over sesi çal
         this.gameOverSound = this.sound.add('game-over-sound', { volume: 0.5 });
         this.gameOverSound.play();
 
         this.buttonClickSound = this.sound.add('button-click', { volume: 0.7 });
-
         // "Game Over" Yazısı
         this.gameOverText = this.add.image(config.width / 2, config.height / 2, 'game-over')
         this.gameOverText.setOrigin(0.5, 0.5);
 
         //skor yazısı
-        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 220, 'Score : ' + finalScore, {
+        this.FinalScoreText = this.add.text(config.width / 2, config.height / 2 + 220, 'Score : ' + this.finalScore, {
             fontSize: '50px',
             fontWeight: 'bold',
             fill: '#fe3a29',
@@ -987,14 +1034,28 @@ class WinScene extends Phaser.Scene {
         this.load.audio('button-click', 'assets/audio/button-click.mp3');
     }
 
-    create() {
+    init(data) {
+        this.finalScore = data.finalScore;
+        this.heartsLeft = data.heartsLeft;
+        this.arrowsFired = data.arrowsFired;
+        this.itemsSpawned = data.itemsSpawned;
+        this.bombsSpawned = data.bombsSpawned;
+        this.itemsHit = data.itemsHit;
+        this.bombsHit = data.bombsHit;
+        this.durationMs = data.durationMs;
+        this.didWin = data.didWin;
+    }
 
+        
+
+
+    create() {      
         // Kazanma sesi çal
         this.winSound = this.sound.add('win-sound', { volume: 0.6 });
         this.winSound.play();
 
         this.buttonClickSound = this.sound.add('button-click', { volume: 0.7 });
-
+  
         //kazandınız yazısı
         this.winText = this.add.image(config.width / 2, config.height / 2, 'win');
 
