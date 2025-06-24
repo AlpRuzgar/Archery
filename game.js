@@ -821,7 +821,7 @@ class GameScene extends Phaser.Scene {
 
         // Can 0'a düşerse oyunu bitir
         if (this.hearts <= 0) {
-          this.handleGameOver();
+            this.handleGameOver();
         }
     }
 
@@ -835,6 +835,7 @@ class GameScene extends Phaser.Scene {
         this.gameActive = false;
         this.clearScreen();
         this.sound.stopAll();
+        this.lightningTimer.remove();
         this.scene.start('GameOverScene', {
             finalScore: this.score,
             heartsLeft: this.hearts,
@@ -943,8 +944,8 @@ class GameOverScene extends Phaser.Scene {
         this.load.audio('game-over-sound', 'assets/audio/game-over.mp3');
         this.load.audio('button-click', 'assets/audio/button-click.mp3');
     }
-  
-  init(data) {
+
+    init(data) {
         this.finalScore = data.finalScore;
         this.heartsLeft = data.heartsLeft;
         this.arrowsFired = data.arrowsFired;
@@ -957,13 +958,7 @@ class GameOverScene extends Phaser.Scene {
     }
 
     create() {
-
-        
-
-    
-
-    create() {
-      // Game over sesi çal
+        // Game over sesi çal
         this.gameOverSound = this.sound.add('game-over-sound', { volume: 0.5 });
         this.gameOverSound.play();
 
@@ -1011,6 +1006,7 @@ class GameOverScene extends Phaser.Scene {
         });
 
         restartButton.on('pointerdown', () => {
+            this.sound.stopAll();
             this.buttonClickSound.play();
             restartButton.disableInteractive();
             restartButton.setVisible(false);
@@ -1019,6 +1015,7 @@ class GameOverScene extends Phaser.Scene {
         });
     }
 }
+
 
 class WinScene extends Phaser.Scene {
     constructor() {
@@ -1046,16 +1043,16 @@ class WinScene extends Phaser.Scene {
         this.didWin = data.didWin;
     }
 
-        
 
 
-    create() {      
+
+    create() {
         // Kazanma sesi çal
         this.winSound = this.sound.add('win-sound', { volume: 0.6 });
         this.winSound.play();
 
         this.buttonClickSound = this.sound.add('button-click', { volume: 0.7 });
-  
+
         //kazandınız yazısı
         this.winText = this.add.image(config.width / 2, config.height / 2, 'win');
 
@@ -1086,6 +1083,7 @@ class WinScene extends Phaser.Scene {
         });
 
         restartButton.on('pointerdown', () => {
+            this.sound.stopAll();
             this.buttonClickSound.play();
             restartButton.disableInteractive();
             restartButton.setVisible(false);
