@@ -12,6 +12,7 @@ class StartScene extends Phaser.Scene {
         this.load.image('sound-on', 'assets/ui/sound-on-white.png');    // Ses açık ikonu
         this.load.image('sound-off', 'assets/ui/sound-off-white.png');  // Ses kapalı ikonu
         this.load.image('start', 'assets/ui/start.png');
+        this.load.image('howToButton', 'assets/ui/howToBtn.png')
 
         this.load.audio('background-music', 'assets/audio/background-music.mp3');
         this.load.audio('button-click', 'assets/audio/button-click.mp3');
@@ -65,44 +66,105 @@ class StartScene extends Phaser.Scene {
         });
 
         // Buton
-        let startButton = this.add.image(config.width / 2, config.width / 2 + 50, 'start-button');
-        startButton.setScale(0.4);
-        startButton.setInteractive({ useHandCursor: true });
-        startButton.setDepth(2);
+        this.startButton = this.add.image(config.width / 2, config.height / 2 + 150, 'start-button');
+        this.startButton.setScale(0.4);
+        this.startButton.setInteractive({ useHandCursor: true });
+        this.startButton.setDepth(2);
 
 
         // Buton için pulse efekti
         let buttonTween = this.tweens.add({
-            targets: [startButton],
-            scaleX: { from: startButton.scaleX, to: startButton.scaleX * 1.1 },
-            scaleY: { from: startButton.scaleY, to: startButton.scaleY * 1.1 },
+            targets: [this.startButton],
+            scaleX: { from: this.startButton.scaleX, to: this.startButton.scaleX * 1.1 },
+            scaleY: { from: this.startButton.scaleY, to: this.startButton.scaleY * 1.1 },
             duration: 800,
             yoyo: true,
             repeat: -1
         });
 
         // Buton efektleri
-        startButton.on('pointerover', () => {
-            startButton.setScale(0.45);
+        this.startButton.on('pointerover', () => {
+            this.startButton.setScale(0.45);
             buttonTween.pause();
         });
 
-        startButton.on('pointerout', () => {
-            startButton.setScale(0.4);
+        this.startButton.on('pointerout', () => {
+            this.startButton.setScale(0.4);
             buttonTween.resume();
         });
 
-        startButton.on('pointerdown', () => {
+        this.startButton.on('pointerdown', () => {
             // Button click sesi çal
             this.buttonClickSound.play();
-            startButton.disableInteractive();
-            startButton.setVisible(false);
+            this.startButton.disableInteractive();
+            this.startButton.setVisible(false);
             // Menü müziğini durdur
             this.backgroundMusic.stop();
             this.scene.start('GameScene');
 
         });
+
+        this.isPopupOpen = false;
+        this.howToPlayBtn = this.add.image(config.width / 2, config.height - 100, 'howToButton')
+        this.howToPlayBtn.setScale(0.4)
+        this.howToPlayBtn.setInteractive({ useHandCursor: true });
+
+        // Buton efektleri
+        this.howToPlayBtn.on('pointerover', () => {
+            this.howToPlayBtn.setScale(0.45);
+        });
+
+        this.howToPlayBtn.on('pointerout', () => {
+            this.howToPlayBtn.setScale(0.4);
+        });
+
+        this.howToPlayBtn.on('pointerdown', () => {
+            this.openHowToPlayPopup();
+        });
     }
+
+    openHowToPlayPopup() {
+        this.howToPlayBtn.disableInteractive();
+        this.startButton.disableInteractive();
+        const popupBg = this.add.rectangle(
+            config.width / 2, config.height / 2,
+            config.width * 0.9, config.height * 0.6,
+            0x000000, 0.85
+        ).setScrollFactor(0).setDepth(2000);
+
+        const howToPlayText = this.add.text(
+            config.width / 2, config.height / 2,
+            '→ Fareyi sürükleyip nişan al:\n→ Büyü topunu fırlat\n→Hedefleri vurarak skor topla, zehir şişelerini vurmaktan kaçın!',
+            {
+                fontSize: '40px',
+                fontFamily: 'monospace',
+                fill: '#ffffff',
+                align: 'center',
+                wordWrap: { width: config.width * 0.8 }
+            }
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(2001);
+
+        const closeText = this.add.text(
+            config.width / 2, config.height / 2 + 180,
+            'Kapat', {
+            fontSize: '35px',
+            fontFamily: 'monospace',
+            fill: '#ff6666',
+            backgroundColor: '#ffffff',
+            padding: { x: 12, y: 5 }
+        }
+        ).setOrigin(0.5).setInteractive().setScrollFactor(0).setDepth(2002);
+
+        closeText.on('pointerup', () => {
+            this.isPopupOpen = false;
+            popupBg.destroy();
+            howToPlayText.destroy();
+            closeText.destroy();
+            this.howToPlayBtn.setInteractive();
+            this.startButton.setInteractive();
+        });
+    }
+
 }
 
 // ------------------- GameScene -------------------
@@ -1114,6 +1176,5 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-//TODO: ateş toplarına dönme ekle
-//TODO: sesleri ekle
+
 //* J -> uzay kısmı K -> win ekranı L -> gameover ekranı 
